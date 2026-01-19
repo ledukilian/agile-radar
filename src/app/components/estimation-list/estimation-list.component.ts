@@ -238,6 +238,7 @@ export class EstimationListComponent implements OnInit {
     const newEstimation = this.estimationService.createEstimation({
       name: 'Nouvelle estimation',
       description: '',
+      type: 'user-story',
       complexity: 0,
       uncertainty: 0,
       risk: 0,
@@ -275,17 +276,34 @@ export class EstimationListComponent implements OnInit {
   }
 
   /**
-   * Détermine la T-shirt size pour une estimation donnée
+   * Détermine la T-shirt size pour un nombre de points donné
+   * Utilise <= pour que la borne max soit incluse dans la taille (ex: 8 pts = S, pas M)
    */
-  getTShirtSize(estimation: Estimation): { size: string; min: number; max: number; bgColor: string; textColor: string } {
-    const points = this.calculateComplexityPoints(estimation);
-    
+  private getTShirtSizeByPoints(points: number): { size: string; min: number; max: number; bgColor: string; textColor: string } {
     for (const tShirt of this.tShirtSizes) {
-      if (points < tShirt.max) {
+      if (points <= tShirt.max) {
         return tShirt;
       }
     }
     return this.tShirtSizes[this.tShirtSizes.length - 1];
+  }
+
+  /**
+   * Détermine la T-shirt size pour une estimation donnée
+   * Utilise les points arrondis au ceil pour être cohérent avec l'affichage
+   */
+  getTShirtSize(estimation: Estimation): { size: string; min: number; max: number; bgColor: string; textColor: string } {
+    const points = this.getComplexityPointsCeil(estimation);
+    return this.getTShirtSizeByPoints(points);
+  }
+
+  /**
+   * Détermine la T-shirt size pour une feature en tenant compte du mode de calcul
+   * En mode "sum-us", la couleur est basée sur la somme des US, pas sur les valeurs de la feature
+   */
+  getFeatureTShirtSize(feature: Estimation): { size: string; min: number; max: number; bgColor: string; textColor: string } {
+    const points = this.getFeatureTotalPoints(feature);
+    return this.getTShirtSizeByPoints(points);
   }
 
   /**

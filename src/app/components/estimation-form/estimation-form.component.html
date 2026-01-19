@@ -414,10 +414,10 @@
         <div 
           class="flex items-start gap-3 p-3 rounded-lg transition-all"
           [ngClass]="{
-            'bg-green-500/10 border border-green-500/20': rec.type === 'success',
-            'bg-amber-500/10 border border-amber-500/20': rec.type === 'warning',
-            'bg-red-500/10 border border-red-500/20': rec.type === 'danger',
-            'bg-blue-500/10 border border-blue-500/20': rec.type === 'info'
+            'bg-green-500/10': rec.type === 'success',
+            'bg-amber-500/10': rec.type === 'warning',
+            'bg-red-500/10': rec.type === 'danger',
+            'bg-blue-500/10': rec.type === 'info'
           }"
         >
           <span class="text-lg shrink-0">{{ rec.icon }}</span>

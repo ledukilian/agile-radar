@@ -299,7 +299,7 @@ export class EstimationService {
       if (childUS.length === 0) {
         recommendations.push({
           type: 'info',
-          icon: '📋',
+          icon: 'ℹ️',
           title: 'Aucune User Story rattachée',
           text: 'Cette feature est en mode "Somme des US" mais aucune user story n\'y est rattachée. Créez des US et liez-les à cette feature pour calculer sa complexité automatiquement.'
         });
@@ -311,7 +311,7 @@ export class EstimationService {
 
         recommendations.push({
           type: 'info',
-          icon: '📊',
+          icon: 'ℹ️',
           title: `${childUS.length} User ${childUS.length > 1 ? 'Stories' : 'Story'} rattachée${childUS.length > 1 ? 's' : ''}`,
           text: `La complexité de cette feature est calculée automatiquement à partir des ${childUS.length} US liées. Score moyen des US : ${Math.round(avgUS)}%.`
         });
@@ -509,7 +509,7 @@ export class EstimationService {
     if (estimation.complexityMode !== 'sum-us' && childUS.length === 0) {
       recommendations.push({
         type: 'info',
-        icon: '📝',
+        icon: 'ℹ️',
         title: 'Pas encore de User Stories',
         text: 'Aucune US n\'est rattachée à cette feature. Pensez à la décomposer en user stories pour faciliter le suivi et l\'estimation.'
       });
@@ -653,7 +653,7 @@ export class EstimationService {
     if (!estimation.parentFeatureId) {
       recommendations.push({
         type: 'info',
-        icon: '🔗',
+        icon: 'ℹ️',
         title: 'US sans feature parente',
         text: 'Cette user story n\'est rattachée à aucune feature. Envisagez de la lier pour une meilleure organisation du backlog.'
       });
