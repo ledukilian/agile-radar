@@ -183,6 +183,13 @@ body {
   box-shadow: 0 0 20px var(--glow-primary);
 }
 
+/* Onglet actif (même style que les éléments sélectionnés) */
+.tab-active {
+  background: var(--list-selected-bg);
+  border: 1px solid var(--list-selected-border);
+  box-shadow: 0 0 20px var(--glow-primary);
+}
+
 /* Inputs stylisés */
 .glass-input {
   background: var(--input-bg);

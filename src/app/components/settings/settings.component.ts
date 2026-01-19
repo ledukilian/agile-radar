@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../services/settings.service';
-import { Taille } from '../../models/estimation.model';
+import { Taille, BaseSettings } from '../../models/estimation.model';
 
 @Component({
   selector: 'app-settings',
@@ -12,17 +12,42 @@ import { Taille } from '../../models/estimation.model';
   styleUrl: './settings.component.scss'
 })
 export class SettingsComponent implements OnInit {
+  // Onglets
+  activeTab: 'base' | 'curseurs' = 'base';
+
+  // Paramètres de base
+  baseSettings: BaseSettings = {
+    title: '',
+    date: '',
+    description: '',
+    author: ''
+  };
+
+  // Curseurs (tailles)
   tailles: Taille[] = [];
   editingIndex: number | null = null;
 
   constructor(private settingsService: SettingsService) {}
 
   ngOnInit(): void {
+    this.loadSettings();
+  }
+
+  loadSettings(): void {
+    this.loadBaseSettings();
     this.loadTailles();
+  }
+
+  loadBaseSettings(): void {
+    this.baseSettings = { ...this.settingsService.getBaseSettings() };
   }
 
   loadTailles(): void {
     this.tailles = this.settingsService.getTailles().map(t => ({ ...t }));
+  }
+
+  setActiveTab(tab: 'base' | 'curseurs'): void {
+    this.activeTab = tab;
   }
 
   addTaille(): void {
@@ -47,6 +72,25 @@ export class SettingsComponent implements OnInit {
   }
 
   save(): void {
+    if (this.activeTab === 'base') {
+      this.saveBaseSettings();
+    } else {
+      this.saveTailles();
+    }
+  }
+
+  saveBaseSettings(): void {
+    // Validation des paramètres de base
+    if (!this.baseSettings.title.trim()) {
+      alert('Le titre est obligatoire');
+      return;
+    }
+
+    this.settingsService.updateBaseSettings(this.baseSettings);
+    alert('Paramètres de base sauvegardés avec succès !');
+  }
+
+  saveTailles(): void {
     // Validation
     if (this.tailles.length < 2) {
       alert('Veuillez définir au moins 2 tailles');
@@ -68,18 +112,22 @@ export class SettingsComponent implements OnInit {
 
     this.settingsService.updateTailles(this.tailles);
     this.editingIndex = null;
-    alert('Configuration sauvegardée avec succès !');
+    alert('Curseurs sauvegardés avec succès !');
   }
 
   cancel(): void {
-    this.loadTailles();
-    this.editingIndex = null;
+    if (this.activeTab === 'base') {
+      this.loadBaseSettings();
+    } else {
+      this.loadTailles();
+      this.editingIndex = null;
+    }
   }
 
   reset(): void {
     if (confirm('Êtes-vous sûr de vouloir réinitialiser à la configuration par défaut ?')) {
       this.settingsService.resetToDefault();
-      this.loadTailles();
+      this.loadSettings();
       this.editingIndex = null;
     }
   }

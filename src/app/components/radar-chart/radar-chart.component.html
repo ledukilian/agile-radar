@@ -1,57 +1,25 @@
-<div #exportContainer class="glass-card rounded-2xl p-4 lg:p-6 h-full flex flex-col overflow-auto">
-  <div *ngIf="estimation" class="flex items-center gap-2 lg:gap-3 mb-3 lg:mb-4 pb-3 lg:pb-4 border-b glass-divider shrink-0">
-    <span 
-      class="w-8 lg:w-10 px-1.5 lg:px-2 py-0.5 lg:py-1 text-xs lg:text-sm font-bold rounded shrink-0 text-center"
-      [ngClass]="[getTShirtSize().bgColor, getTShirtSize().textColor]"
-    >
-      {{ getTShirtSize().size }}
-    </span>
-    <h2 class="text-base lg:text-xl font-bold text-glass-primary truncate flex-1 min-w-0">{{ estimation.name }}</h2>
-    <span class="px-1.5 lg:px-2 py-0.5 lg:py-1 text-xs font-medium rounded glass-inner text-glass-secondary shrink-0 whitespace-nowrap">
-      {{ getComplexityPointsCeil() }} pts
-    </span>
-  </div>
-  <div class="relative flex items-center justify-center -my-4 lg:-my-10 shrink-0" style="height: min(400px, 50vh);">
-    <canvas #chartCanvas></canvas>
-  </div>
-  <!-- Résumé global compact -->
-  <div *ngIf="estimation" class="mt-2 p-2 lg:p-3 rounded-lg glass-inner">
-    <!-- Échelle T-shirt sizes -->
-    <div class="flex items-center justify-center gap-0.5 lg:gap-1 mb-2">
-      <ng-container *ngFor="let tshirt of tShirtSizes">
-        <div class="w-6 lg:w-8 px-1 lg:px-1.5 py-0.5 rounded text-center transition-all text-[9px] lg:text-[10px]"
-             [ngClass]="getTShirtSize().size === tshirt.size 
-               ? [tshirt.bgColor, tshirt.textColor, tshirt.ringColor, 'font-bold', 'ring-1', 'ring-offset-1'] 
-               : 'glass-inner text-glass-muted'">
-          {{ tshirt.size }}
-        </div>
-      </ng-container>
+<div #exportContainer class="glass-card rounded-2xl p-4 lg:p-6 flex flex-col">
+  <div *ngIf="estimation" class="mb-3 lg:mb-4 pb-3 lg:pb-4 border-b glass-divider shrink-0">
+    <div class="flex items-center gap-2 lg:gap-3">
+      <span 
+        class="w-8 lg:w-10 px-1.5 lg:px-2 py-0.5 lg:py-1 text-xs lg:text-sm font-bold rounded shrink-0 text-center"
+        [ngClass]="[getTShirtSize().bgColor, getTShirtSize().textColor]"
+      >
+        {{ getTShirtSize().size }}
+      </span>
+      <h2 class="text-base lg:text-xl font-bold text-glass-primary truncate flex-1 min-w-0">{{ estimation.name }}</h2>
+      <span 
+        class="px-1.5 lg:px-2 py-0.5 lg:py-1 text-xs font-bold rounded shrink-0 whitespace-nowrap"
+        [ngClass]="[getTShirtSize().bgColor, getTShirtSize().textColor]"
+      >
+        {{ getComplexityPointsCeil() }} pts
+      </span>
     </div>
-    <div class="flex items-center gap-2 lg:gap-4">
-      <div class="flex items-center gap-1 lg:gap-2">
-        <span class="w-10 lg:w-14 text-lg lg:text-2xl font-black px-1.5 lg:px-2 py-0.5 rounded text-center" [ngClass]="[getTShirtSize().bgColor, getTShirtSize().textColor]">
-          {{ getTShirtSize().size }}
-        </span>
-        <div class="text-[10px] lg:text-xs text-glass-muted hidden sm:block">{{ getTShirtSize().min }}-{{ getTShirtSize().max }} pts</div>
-      </div>
-      <div class="flex-1 min-w-0">
-        <div class="h-1.5 lg:h-2 glass-inner rounded-full overflow-hidden">
-          <div class="h-full transition-all duration-500 rounded-full"
-               [ngClass]="getTShirtProgressClass()"
-               [style.width.%]="getCurseAverage()">
-          </div>
-        </div>
-      </div>
-      <div class="text-right shrink-0">
-        <span class="text-base lg:text-lg font-bold text-glass-primary">{{ getComplexityPointsCeil() }}</span>
-        <span class="text-[10px] lg:text-xs text-glass-muted ml-0.5 lg:ml-1">pts</span>
-      </div>
-    </div>
-    <p class="mt-2 text-[10px] lg:text-[11px] text-glass-muted hidden sm:block">💡 {{ getOverallDescription() }}</p>
+    <p *ngIf="estimation.description" class="mt-2 text-[11px] lg:text-xs text-glass-muted">{{ estimation.description }}</p>
   </div>
 
   <!-- Détail des 5 dimensions CURSE - Compact -->
-  <div *ngIf="estimation" class="mt-2 grid grid-cols-5 gap-1 lg:gap-1.5">
+  <div *ngIf="estimation" class="grid grid-cols-5 gap-1 lg:gap-1.5 mb-2 shrink-0">
     <!-- Complexity -->
     <div class="p-2 rounded-lg glass-inner">
       <div class="flex items-center gap-1">
@@ -158,6 +126,41 @@
     </div>
   </div>
 
+  <div class="relative flex items-center justify-center" style="height: 400px;">
+    <canvas #chartCanvas></canvas>
+  </div>
+  <!-- Auteur sous le graphique -->
+  <p *ngIf="estimation?.author" class="text-[11px] lg:text-xs text-glass-muted text-right mt-2">
+    <span class="opacity-70">Estimation par</span> {{ estimation?.author }}
+  </p>
+  <!-- Résumé global compact -->
+  <div *ngIf="estimation" class="mt-2 shrink-0">
+    <div class="flex items-center justify-between gap-2 p-2 lg:p-3 rounded-lg glass-inner">
+      <!-- T-shirt size actuel -->
+      <div class="flex items-center gap-2">
+        <span class="w-10 lg:w-12 text-lg lg:text-xl font-black py-1 rounded text-center" [ngClass]="[getTShirtSize().bgColor, getTShirtSize().textColor]">
+          {{ getTShirtSize().size }}
+        </span>
+        <div class="flex flex-col">
+          <span class="text-sm lg:text-base font-bold" [ngClass]="getTShirtSize().textColor">{{ getComplexityPointsCeil() }} pts</span>
+          <span class="text-[9px] lg:text-[10px] text-glass-muted">{{ getTShirtSize().min }}-{{ getTShirtSize().max }} pts</span>
+        </div>
+      </div>
+      <!-- Échelle T-shirt sizes -->
+      <div class="flex items-center gap-1 lg:gap-1.5">
+        <ng-container *ngFor="let tshirt of tShirtSizes">
+          <div class="w-7 lg:w-9 py-1 rounded text-center transition-all text-[10px] lg:text-xs"
+               [ngClass]="getTShirtSize().size === tshirt.size 
+                 ? [tshirt.bgColor, tshirt.textColor, 'font-bold', 'scale-110'] 
+                 : 'glass-inner text-glass-muted opacity-60'">
+            {{ tshirt.size }}
+          </div>
+        </ng-container>
+      </div>
+    </div>
+    <p class="mt-1.5 text-[10px] lg:text-[11px] text-glass-muted text-center hidden sm:block">💡 {{ getOverallDescription() }}</p>
+  </div>
+
   <div *ngIf="!estimation" class="text-center text-glass-muted py-8">
     Aucune estimation sélectionnée. Utilisez le formulaire à droite pour créer ou modifier une estimation et voir le diagramme radar se mettre à jour en temps réel.
   </div>
@@ -196,6 +199,6 @@
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
     </svg>
-    {{ copySuccess ? 'Copié !' : 'Copier' }}
+    {{ copySuccess ? 'Copié !' : 'Copier l\'image' }}
   </button>
 </div>

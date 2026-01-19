@@ -102,6 +102,8 @@ export class EstimationService {
         uuid: e.uuid || this.generateUuid(), // Garder l'UUID ou en générer un nouveau
         name: e.name || 'Estimation importée',
         description: e.description || '',
+        date: e.date || '',
+        author: e.author || '',
         complexity: e.complexity || 'Aucune',
         uncertainty: e.uncertainty || 'Aucune',
         risk: e.risk || 'Aucun',

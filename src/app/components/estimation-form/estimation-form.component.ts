@@ -18,6 +18,19 @@ export class EstimationFormComponent implements OnInit, OnChanges {
   @Output() estimationChanged = new EventEmitter<Estimation | null>();
   @Output() deleteEstimation = new EventEmitter<string>();
 
+  // Onglet actif
+  activeTab: 'base' | 'curseurs' = 'base';
+
+  // Limites de caractères pour les champs
+  readonly charLimits = {
+    name: 80,
+    description: 200,
+    author: 50
+  };
+
+  // Clé localStorage pour l'auteur par défaut
+  private readonly AUTHOR_STORAGE_KEY = 'agile-radar-default-author';
+
   tailles: Taille[] = [];
   private saveTimeout?: ReturnType<typeof setTimeout>;
   
@@ -70,6 +83,8 @@ export class EstimationFormComponent implements OnInit, OnChanges {
   formData: {
     name: string;
     description: string;
+    date: string;
+    author: string;
     complexity: number; // Valeur continue 0-100
     uncertainty: number;
     risk: number;
@@ -78,6 +93,8 @@ export class EstimationFormComponent implements OnInit, OnChanges {
   } = {
     name: '',
     description: '',
+    date: new Date().toISOString().split('T')[0],
+    author: '',
     complexity: 50,
     uncertainty: 50,
     risk: 50,
@@ -119,10 +136,17 @@ export class EstimationFormComponent implements OnInit, OnChanges {
   }
 
   private initializeForm(): void {
+    const defaultAuthor = this.getDefaultAuthor();
+    
     if (this.estimation) {
+      // Date par défaut = date enregistrée ou date de dernière modification
+      const defaultDate = this.estimation.date || this.formatDateToInput(this.estimation.updatedAt);
+      
       this.formData = {
         name: this.estimation.name,
         description: this.estimation.description || '',
+        date: defaultDate,
+        author: this.estimation.author || defaultAuthor,
         complexity: this.getGraduationValue(this.estimation.complexity, 'complexity'),
         uncertainty: this.getGraduationValue(this.estimation.uncertainty, 'uncertainty'),
         risk: this.getGraduationValue(this.estimation.risk, 'risk'),
@@ -134,12 +158,38 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       this.formData = {
         name: '',
         description: '',
+        date: new Date().toISOString().split('T')[0],
+        author: defaultAuthor,
         complexity: 0,
         uncertainty: 0,
         risk: 0,
         size: 0,
         effort: 0
       };
+    }
+  }
+
+  private formatDateToInput(date: Date): string {
+    if (!date) return new Date().toISOString().split('T')[0];
+    const d = new Date(date);
+    return d.toISOString().split('T')[0];
+  }
+
+  private getDefaultAuthor(): string {
+    try {
+      return localStorage.getItem(this.AUTHOR_STORAGE_KEY) || '';
+    } catch {
+      return '';
+    }
+  }
+
+  private saveDefaultAuthor(author: string): void {
+    try {
+      if (author.trim()) {
+        localStorage.setItem(this.AUTHOR_STORAGE_KEY, author.trim());
+      }
+    } catch {
+      // Ignorer les erreurs de localStorage
     }
   }
 
@@ -176,6 +226,10 @@ export class EstimationFormComponent implements OnInit, OnChanges {
     return this.graduations[axis] || [];
   }
 
+  setActiveTab(tab: 'base' | 'curseurs'): void {
+    this.activeTab = tab;
+  }
+
   onFieldChange(): void {
     // Émettre une estimation temporaire pour mise à jour live du graphique
     this.emitTemporaryEstimation();
@@ -202,6 +256,8 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       uuid: this.estimation?.uuid || 'temp-uuid',
       name: this.formData.name.trim() || 'Nouvelle estimation',
       description: this.formData.description,
+      date: this.formData.date,
+      author: this.formData.author,
       complexity: this.getTailleLabel(this.formData.complexity, 'complexity'),
       uncertainty: this.getTailleLabel(this.formData.uncertainty, 'uncertainty'),
       risk: this.getTailleLabel(this.formData.risk, 'risk'),
@@ -219,9 +275,16 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       return;
     }
 
+    // Sauvegarder l'auteur par défaut si renseigné
+    if (this.formData.author.trim()) {
+      this.saveDefaultAuthor(this.formData.author);
+    }
+
     const data = {
       name: this.formData.name,
       description: this.formData.description,
+      date: this.formData.date,
+      author: this.formData.author,
       complexity: this.getTailleLabel(this.formData.complexity, 'complexity'),
       uncertainty: this.getTailleLabel(this.formData.uncertainty, 'uncertainty'),
       risk: this.getTailleLabel(this.formData.risk, 'risk'),
@@ -245,6 +308,8 @@ export class EstimationFormComponent implements OnInit, OnChanges {
     this.formData = {
       name: '',
       description: '',
+      date: new Date().toISOString().split('T')[0],
+      author: this.getDefaultAuthor(),
       complexity: 0,
       uncertainty: 0,
       risk: 0,

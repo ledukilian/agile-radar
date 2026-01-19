@@ -3,6 +3,8 @@ export interface Estimation {
   uuid: string; // Identifiant unique universel pour l'import/export
   name: string;
   description?: string;
+  date?: string; // Date de l'estimation
+  author?: string; // Auteur de l'estimation
   complexity: string; // Taille de t-shirt
   uncertainty: string;
   risk: string;
@@ -18,6 +20,14 @@ export interface Taille {
   description?: string; // Ex: "Très faible", "Faible", etc.
 }
 
+export interface BaseSettings {
+  title: string;
+  date: string;
+  description: string;
+  author: string;
+}
+
 export interface CurseConfig {
+  baseSettings: BaseSettings;
   tailles: Taille[];
 }

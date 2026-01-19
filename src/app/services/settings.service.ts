@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { Taille, CurseConfig } from '../models/estimation.model';
+import { Taille, CurseConfig, BaseSettings } from '../models/estimation.model';
 
 @Injectable({
   providedIn: 'root'
@@ -16,6 +16,12 @@ export class SettingsService {
 
   private getDefaultConfig(): CurseConfig {
     return {
+      baseSettings: {
+        title: 'Estimation CURSE',
+        date: new Date().toISOString().split('T')[0],
+        description: '',
+        author: ''
+      },
       tailles: [
         { label: 'XS', value: 10, description: 'Très faible' },
         { label: 'S', value: 30, description: 'Faible' },
@@ -34,6 +40,15 @@ export class SettingsService {
     return this.configSubject.value.tailles;
   }
 
+  getBaseSettings(): BaseSettings {
+    return this.configSubject.value.baseSettings;
+  }
+
+  updateBaseSettings(baseSettings: BaseSettings): void {
+    const config = { ...this.configSubject.value, baseSettings };
+    this.updateConfig(config);
+  }
+
   updateConfig(config: CurseConfig): void {
     this.configSubject.next(config);
     this.saveToStorage(config);
@@ -49,7 +64,10 @@ export class SettingsService {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (stored) {
         const config = JSON.parse(stored);
-        // Convertir les dates si nécessaire
+        // Migration: ajouter baseSettings si absent (anciennes configs)
+        if (!config.baseSettings) {
+          config.baseSettings = this.getDefaultConfig().baseSettings;
+        }
         this.configSubject.next(config);
       }
     } catch (error) {
