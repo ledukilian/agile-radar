@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Chart, ChartConfiguration, ChartData, registerables } from 'chart.js';
 import { Estimation } from '../../models/estimation.model';
 import { SettingsService } from '../../services/settings.service';
+import * as htmlToImage from 'html-to-image';
 
 Chart.register(...registerables);
 
@@ -16,17 +17,20 @@ Chart.register(...registerables);
 export class RadarChartComponent implements OnInit, OnChanges {
   @Input() estimation?: Estimation;
   @ViewChild('chartCanvas', { static: true }) chartCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('exportContainer', { static: true }) exportContainer!: ElementRef<HTMLDivElement>;
   
   private chart?: Chart;
+  isExporting = false;
+  copySuccess = false;
 
   // T-shirt sizes avec leurs ranges de points de complexité (progression Fibonacci)
   tShirtSizes = [
-    { size: 'XS', min: 1, max: 3, bgColor: 'bg-green-100', textColor: 'text-green-700', fillColor: 'rgba(34, 197, 94, 0.25)', borderColor: 'rgba(34, 197, 94, 1)' },
-    { size: 'S', min: 3, max: 8, bgColor: 'bg-lime-100', textColor: 'text-lime-700', fillColor: 'rgba(132, 204, 22, 0.25)', borderColor: 'rgba(132, 204, 22, 1)' },
-    { size: 'M', min: 8, max: 21, bgColor: 'bg-yellow-100', textColor: 'text-yellow-700', fillColor: 'rgba(234, 179, 8, 0.25)', borderColor: 'rgba(234, 179, 8, 1)' },
-    { size: 'L', min: 21, max: 55, bgColor: 'bg-orange-100', textColor: 'text-orange-700', fillColor: 'rgba(249, 115, 22, 0.25)', borderColor: 'rgba(249, 115, 22, 1)' },
-    { size: 'XL', min: 55, max: 144, bgColor: 'bg-red-100', textColor: 'text-red-700', fillColor: 'rgba(239, 68, 68, 0.25)', borderColor: 'rgba(239, 68, 68, 1)' },
-    { size: 'XXL', min: 144, max: 377, bgColor: 'bg-purple-100', textColor: 'text-purple-700', fillColor: 'rgba(168, 85, 247, 0.25)', borderColor: 'rgba(168, 85, 247, 1)' }
+    { size: 'XS', min: 1, max: 3, bgColor: 'bg-green-100', textColor: 'text-green-700', ringColor: 'ring-green-500', fillColor: 'rgba(34, 197, 94, 0.25)', borderColor: 'rgba(34, 197, 94, 1)' },
+    { size: 'S', min: 3, max: 8, bgColor: 'bg-lime-100', textColor: 'text-lime-700', ringColor: 'ring-lime-500', fillColor: 'rgba(132, 204, 22, 0.25)', borderColor: 'rgba(132, 204, 22, 1)' },
+    { size: 'M', min: 8, max: 21, bgColor: 'bg-yellow-100', textColor: 'text-yellow-700', ringColor: 'ring-yellow-500', fillColor: 'rgba(234, 179, 8, 0.25)', borderColor: 'rgba(234, 179, 8, 1)' },
+    { size: 'L', min: 21, max: 55, bgColor: 'bg-orange-100', textColor: 'text-orange-700', ringColor: 'ring-orange-500', fillColor: 'rgba(249, 115, 22, 0.25)', borderColor: 'rgba(249, 115, 22, 1)' },
+    { size: 'XL', min: 55, max: 144, bgColor: 'bg-red-100', textColor: 'text-red-700', ringColor: 'ring-red-500', fillColor: 'rgba(239, 68, 68, 0.25)', borderColor: 'rgba(239, 68, 68, 1)' },
+    { size: 'XXL', min: 144, max: 377, bgColor: 'bg-purple-100', textColor: 'text-purple-700', ringColor: 'ring-purple-500', fillColor: 'rgba(168, 85, 247, 0.25)', borderColor: 'rgba(168, 85, 247, 1)' }
   ];
 
   // Graduations pour le calcul
@@ -215,8 +219,8 @@ export class RadarChartComponent implements OnInit, OnChanges {
             'rgba(59, 130, 246, 1)'    // Effort - Blue
           ],
           pointBorderColor: '#fff',
-          pointRadius: 6,
-          pointHoverRadius: 8,
+          pointRadius: 8,
+          pointHoverRadius: 10,
           pointHoverBackgroundColor: [
             'rgba(234, 179, 8, 1)',    // Complexity - Yellow
             'rgba(147, 51, 234, 1)',   // Uncertainty - Purple
@@ -461,5 +465,67 @@ export class RadarChartComponent implements OnInit, OnChanges {
    */
   createRange(count: number): number[] {
     return Array.from({ length: count }, (_, i) => i);
+  }
+
+  /**
+   * Exporte le graphique au format JPG
+   */
+  async exportAsJpg(): Promise<void> {
+    if (!this.exportContainer || this.isExporting) return;
+    
+    this.isExporting = true;
+    
+    try {
+      const dataUrl = await htmlToImage.toJpeg(this.exportContainer.nativeElement, {
+        backgroundColor: '#f1f5f9', // Fond clair (slate-100)
+        pixelRatio: 2, // Meilleure qualité
+        quality: 0.95
+      });
+      
+      // Télécharger le fichier
+      const link = document.createElement('a');
+      const fileName = this.estimation?.name 
+        ? `estimation-${this.estimation.name.replace(/[^a-zA-Z0-9]/g, '-')}.jpg`
+        : 'estimation-radar.jpg';
+      link.download = fileName;
+      link.href = dataUrl;
+      link.click();
+    } catch (error) {
+      console.error('Erreur lors de l\'export:', error);
+    } finally {
+      this.isExporting = false;
+    }
+  }
+
+  /**
+   * Copie l'image du graphique dans le presse-papier
+   */
+  async copyToClipboard(): Promise<void> {
+    if (!this.exportContainer || this.isExporting) return;
+    
+    this.isExporting = true;
+    this.copySuccess = false;
+    
+    try {
+      const blob = await htmlToImage.toBlob(this.exportContainer.nativeElement, {
+        backgroundColor: '#f1f5f9', // Fond clair (slate-100)
+        pixelRatio: 2 // Meilleure qualité
+      });
+      
+      if (blob) {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob })
+        ]);
+        this.copySuccess = true;
+        // Reset le message de succès après 2 secondes
+        setTimeout(() => {
+          this.copySuccess = false;
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la copie dans le presse-papier:', error);
+    } finally {
+      this.isExporting = false;
+    }
   }
 }
