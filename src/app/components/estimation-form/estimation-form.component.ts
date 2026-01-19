@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Estimation, Taille } from '../../models/estimation.model';
 import { SettingsService } from '../../services/settings.service';
-import { EstimationService } from '../../services/estimation.service';
+import { EstimationService, Recommendation } from '../../services/estimation.service';
 
 @Component({
   selector: 'app-estimation-form',
@@ -17,9 +17,13 @@ export class EstimationFormComponent implements OnInit, OnChanges {
   @Input() compact: boolean = false;
   @Output() estimationChanged = new EventEmitter<Estimation | null>();
   @Output() deleteEstimation = new EventEmitter<string>();
+  @Output() closeForm = new EventEmitter<void>();
 
   // Onglet actif
-  activeTab: 'base' | 'curseurs' = 'base';
+  activeTab: 'base' | 'curseurs' | 'conseils' = 'base';
+  
+  // Recommandations calculées (stockées pour éviter les recalculs dans le template)
+  recommendations: Recommendation[] = [];
 
   // Limites de caractères pour les champs
   readonly charLimits = {
@@ -49,34 +53,37 @@ export class EstimationFormComponent implements OnInit, OnChanges {
     complexity: [
       { label: 'Aucune', value: 0 },
       { label: 'Simple', value: 25 },
-      { label: 'Moyenne', value: 50 },
+      { label: 'Modérée', value: 50 },
       { label: 'Complexe', value: 75 },
-      { label: 'Impossible', value: 100 }
+      { label: 'Extrême', value: 100 }
     ],
     uncertainty: [
       { label: 'Aucune', value: 0 },
       { label: 'Faible', value: 25 },
-      { label: 'Moyenne', value: 50 },
+      { label: 'Modérée', value: 50 },
       { label: 'Élevée', value: 75 },
       { label: 'Totale', value: 100 }
     ],
     risk: [
       { label: 'Aucun', value: 0 },
-      { label: 'Faible', value: 33 },
-      { label: 'Moyen', value: 66 },
-      { label: 'Élevé', value: 100 }
+      { label: 'Faible', value: 25 },
+      { label: 'Modéré', value: 50 },
+      { label: 'Élevé', value: 75 },
+      { label: 'Critique', value: 100 }
     ],
     size: [
-      { label: 'Petit', value: 0 },
-      { label: 'Moyen', value: 33 },
-      { label: 'Grand', value: 66 },
+      { label: 'Minuscule', value: 0 },
+      { label: 'Petit', value: 25 },
+      { label: 'Moyen', value: 50 },
+      { label: 'Grand', value: 75 },
       { label: 'Énorme', value: 100 }
     ],
     effort: [
-      { label: 'Petit', value: 0 },
-      { label: 'Moyen', value: 33 },
-      { label: 'Grand', value: 66 },
-      { label: 'Inconnu', value: 100 }
+      { label: 'Fluide', value: 0 },
+      { label: 'Supportable', value: 25 },
+      { label: 'Demandant', value: 50 },
+      { label: 'Pénible', value: 75 },
+      { label: 'Éprouvant', value: 100 }
     ]
   };
   
@@ -110,6 +117,7 @@ export class EstimationFormComponent implements OnInit, OnChanges {
   ngOnInit(): void {
     this.loadTailles();
     this.initializeForm();
+    this.updateRecommendations();
     // Émettre immédiatement une estimation temporaire pour l'affichage live
     // Utiliser setTimeout pour s'assurer que les tailles sont chargées
     setTimeout(() => {
@@ -119,9 +127,17 @@ export class EstimationFormComponent implements OnInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['estimation']) {
-      this.initializeForm();
-      // Émettre immédiatement après l'initialisation pour mise à jour live
-      this.emitTemporaryEstimation();
+      const prev = changes['estimation'].previousValue;
+      const curr = changes['estimation'].currentValue;
+      
+      // Ne réinitialiser que si l'ID a changé (nouvelle estimation sélectionnée)
+      // Évite la boucle infinie quand on met à jour les valeurs
+      if (prev?.id !== curr?.id) {
+        this.initializeForm();
+        this.updateRecommendations();
+        // Émettre immédiatement après l'initialisation pour mise à jour live
+        this.emitTemporaryEstimation();
+      }
     }
   }
 
@@ -142,16 +158,17 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       // Date par défaut = date enregistrée ou date de dernière modification
       const defaultDate = this.estimation.date || this.formatDateToInput(this.estimation.updatedAt);
       
+      // Utiliser directement les valeurs numériques de l'estimation
       this.formData = {
         name: this.estimation.name,
         description: this.estimation.description || '',
         date: defaultDate,
         author: this.estimation.author || defaultAuthor,
-        complexity: this.getGraduationValue(this.estimation.complexity, 'complexity'),
-        uncertainty: this.getGraduationValue(this.estimation.uncertainty, 'uncertainty'),
-        risk: this.getGraduationValue(this.estimation.risk, 'risk'),
-        size: this.getGraduationValue(this.estimation.size, 'size'),
-        effort: this.getGraduationValue(this.estimation.effort, 'effort')
+        complexity: this.estimation.complexity,
+        uncertainty: this.estimation.uncertainty,
+        risk: this.estimation.risk,
+        size: this.estimation.size,
+        effort: this.estimation.effort
       };
     } else {
       // Nouvelle estimation : valeurs par défaut au minimum (0)
@@ -226,11 +243,22 @@ export class EstimationFormComponent implements OnInit, OnChanges {
     return this.graduations[axis] || [];
   }
 
-  setActiveTab(tab: 'base' | 'curseurs'): void {
+  setActiveTab(tab: 'base' | 'curseurs' | 'conseils'): void {
     this.activeTab = tab;
   }
 
   onFieldChange(): void {
+    // Forcer la conversion en nombre pour les valeurs des sliders
+    // (les inputs range retournent des strings avec ngModel)
+    this.formData.complexity = +this.formData.complexity;
+    this.formData.uncertainty = +this.formData.uncertainty;
+    this.formData.risk = +this.formData.risk;
+    this.formData.size = +this.formData.size;
+    this.formData.effort = +this.formData.effort;
+
+    // Mettre à jour les recommandations
+    this.updateRecommendations();
+
     // Émettre une estimation temporaire pour mise à jour live du graphique
     this.emitTemporaryEstimation();
 
@@ -250,7 +278,7 @@ export class EstimationFormComponent implements OnInit, OnChanges {
 
   private emitTemporaryEstimation(): void {
     // Permettre l'affichage même sans nom pour le live update
-    // Utiliser directement la valeur pour le graphique, mais convertir en label pour l'affichage
+    // Utiliser directement les valeurs numériques (système analogique)
     const tempEstimation: Estimation = {
       id: this.estimation?.id || 'temp',
       uuid: this.estimation?.uuid || 'temp-uuid',
@@ -258,11 +286,11 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       description: this.formData.description,
       date: this.formData.date,
       author: this.formData.author,
-      complexity: this.getTailleLabel(this.formData.complexity, 'complexity'),
-      uncertainty: this.getTailleLabel(this.formData.uncertainty, 'uncertainty'),
-      risk: this.getTailleLabel(this.formData.risk, 'risk'),
-      size: this.getTailleLabel(this.formData.size, 'size'),
-      effort: this.getTailleLabel(this.formData.effort, 'effort'),
+      complexity: this.formData.complexity,
+      uncertainty: this.formData.uncertainty,
+      risk: this.formData.risk,
+      size: this.formData.size,
+      effort: this.formData.effort,
       createdAt: this.estimation?.createdAt || new Date(),
       updatedAt: new Date()
     };
@@ -280,16 +308,17 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       this.saveDefaultAuthor(this.formData.author);
     }
 
+    // Sauvegarder directement les valeurs numériques (système analogique)
     const data = {
       name: this.formData.name,
       description: this.formData.description,
       date: this.formData.date,
       author: this.formData.author,
-      complexity: this.getTailleLabel(this.formData.complexity, 'complexity'),
-      uncertainty: this.getTailleLabel(this.formData.uncertainty, 'uncertainty'),
-      risk: this.getTailleLabel(this.formData.risk, 'risk'),
-      size: this.getTailleLabel(this.formData.size, 'size'),
-      effort: this.getTailleLabel(this.formData.effort, 'effort')
+      complexity: this.formData.complexity,
+      uncertainty: this.formData.uncertainty,
+      risk: this.formData.risk,
+      size: this.formData.size,
+      effort: this.formData.effort
     };
 
     if (this.estimation) {
@@ -382,5 +411,28 @@ export class EstimationFormComponent implements OnInit, OnChanges {
     if (this.estimation && confirm(`Êtes-vous sûr de vouloir supprimer "${this.estimation.name}" ?`)) {
       this.deleteEstimation.emit(this.estimation.id);
     }
+  }
+
+  /**
+   * Met à jour les recommandations basées sur les valeurs actuelles du formulaire
+   */
+  private updateRecommendations(): void {
+    // Créer une estimation temporaire à partir des valeurs du formulaire
+    const tempEstimation: Estimation = {
+      id: this.estimation?.id || 'temp',
+      uuid: this.estimation?.uuid || 'temp-uuid',
+      name: this.formData.name,
+      description: this.formData.description,
+      date: this.formData.date,
+      author: this.formData.author,
+      complexity: this.formData.complexity,
+      uncertainty: this.formData.uncertainty,
+      risk: this.formData.risk,
+      size: this.formData.size,
+      effort: this.formData.effort,
+      createdAt: this.estimation?.createdAt || new Date(),
+      updatedAt: new Date()
+    };
+    this.recommendations = this.estimationService.getRecommendations(tempEstimation);
   }
 }

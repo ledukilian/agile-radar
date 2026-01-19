@@ -10,8 +10,47 @@ export class EstimationService {
   private estimationsSubject = new BehaviorSubject<Estimation[]>([]);
   public estimations$: Observable<Estimation[]> = this.estimationsSubject.asObservable();
 
+  // Tables de migration des anciens labels vers valeurs numériques
+  private readonly LABEL_TO_VALUE: Record<string, Record<string, number>> = {
+    complexity: {
+      'aucune': 0, 'simple': 25, 'moyenne': 50, 'complexe': 75, 'impossible': 100
+    },
+    uncertainty: {
+      'aucune': 0, 'faible': 25, 'moyenne': 50, 'élevée': 75, 'totale': 100
+    },
+    risk: {
+      'aucun': 0, 'faible': 33, 'moyen': 66, 'élevé': 100
+    },
+    size: {
+      'petit': 0, 'moyen': 33, 'grand': 66, 'énorme': 100
+    },
+    effort: {
+      'petit': 0, 'moyen': 33, 'grand': 66, 'inconnu': 100
+    }
+  };
+
   constructor() {
     this.loadFromStorage();
+  }
+
+  /**
+   * Convertit une ancienne valeur label en valeur numérique
+   */
+  private migrateValue(value: string | number, axis: string): number {
+    // Si c'est déjà un nombre, le retourner directement
+    if (typeof value === 'number') {
+      return Math.max(0, Math.min(100, value));
+    }
+    // Sinon, chercher le label dans la table de migration
+    const labelMap = this.LABEL_TO_VALUE[axis];
+    if (labelMap) {
+      const numericValue = labelMap[value.toLowerCase()];
+      if (numericValue !== undefined) {
+        return numericValue;
+      }
+    }
+    // Valeur par défaut si non trouvé
+    return 0;
   }
 
   getAllEstimations(): Estimation[] {
@@ -59,6 +98,14 @@ export class EstimationService {
   }
 
   /**
+   * Supprime toutes les estimations
+   */
+  deleteAllEstimations(): void {
+    this.estimationsSubject.next([]);
+    this.saveToStorage([]);
+  }
+
+  /**
    * Exporte toutes les estimations au format JSON
    */
   exportToJson(): string {
@@ -85,6 +132,7 @@ export class EstimationService {
   /**
    * Importe des estimations depuis un fichier JSON
    * Les estimations avec un UUID existant sont écrasées, les nouvelles sont ajoutées
+   * Supporte les deux formats : ancien (labels) et nouveau (valeurs numériques)
    * @param jsonContent Le contenu JSON à importer
    * @returns Un objet avec le nombre d'estimations ajoutées et mises à jour
    */
@@ -96,7 +144,7 @@ export class EstimationService {
         throw new Error('Le fichier doit contenir un tableau d\'estimations');
       }
 
-      // Valider et convertir les estimations importées
+      // Valider et convertir les estimations importées (avec migration si nécessaire)
       const validEstimations: Estimation[] = imported.map((e: any) => ({
         id: this.generateId(), // Toujours générer un nouvel id local
         uuid: e.uuid || this.generateUuid(), // Garder l'UUID ou en générer un nouveau
@@ -104,11 +152,11 @@ export class EstimationService {
         description: e.description || '',
         date: e.date || '',
         author: e.author || '',
-        complexity: e.complexity || 'Aucune',
-        uncertainty: e.uncertainty || 'Aucune',
-        risk: e.risk || 'Aucun',
-        size: e.size || 'Petit',
-        effort: e.effort || 'Petit',
+        complexity: this.migrateValue(e.complexity ?? 0, 'complexity'),
+        uncertainty: this.migrateValue(e.uncertainty ?? 0, 'uncertainty'),
+        risk: this.migrateValue(e.risk ?? 0, 'risk'),
+        size: this.migrateValue(e.size ?? 0, 'size'),
+        effort: this.migrateValue(e.effort ?? 0, 'effort'),
         createdAt: e.createdAt ? new Date(e.createdAt) : new Date(),
         updatedAt: new Date()
       }));
@@ -183,15 +231,21 @@ export class EstimationService {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (stored) {
         const estimations = JSON.parse(stored);
-        // Convertir les dates et migrer les anciennes estimations sans UUID
-        const parsed = estimations.map((e: any) => ({
+        // Convertir les dates et migrer les anciennes estimations (labels → nombres, UUID)
+        const parsed: Estimation[] = estimations.map((e: any) => ({
           ...e,
           uuid: e.uuid || this.generateUuid(), // Migration : ajouter UUID si absent
+          // Migration : convertir les labels en valeurs numériques si nécessaire
+          complexity: this.migrateValue(e.complexity ?? 0, 'complexity'),
+          uncertainty: this.migrateValue(e.uncertainty ?? 0, 'uncertainty'),
+          risk: this.migrateValue(e.risk ?? 0, 'risk'),
+          size: this.migrateValue(e.size ?? 0, 'size'),
+          effort: this.migrateValue(e.effort ?? 0, 'effort'),
           createdAt: new Date(e.createdAt),
           updatedAt: new Date(e.updatedAt)
         }));
         this.estimationsSubject.next(parsed);
-        // Sauvegarder pour persister les UUIDs générés lors de la migration
+        // Sauvegarder pour persister les migrations
         this.saveToStorage(parsed);
       }
     } catch (error) {
@@ -206,4 +260,145 @@ export class EstimationService {
       console.error('Erreur lors de la sauvegarde des estimations:', error);
     }
   }
+
+  /**
+   * Calcule les recommandations pour une estimation donnée
+   * @param estimation L'estimation à analyser
+   * @returns Liste des recommandations avec type, icône, titre, texte et dimension optionnelle
+   */
+  getRecommendations(estimation: Estimation | null | undefined): Recommendation[] {
+    if (!estimation) return [];
+
+    const recommendations: Recommendation[] = [];
+
+    const { size, complexity, uncertainty, risk, effort } = estimation;
+    const avg = (complexity + uncertainty + risk + size + effort) / 5;
+
+    // Analyse de la taille
+    if (size >= 75) {
+      recommendations.push({
+        type: 'danger',
+        icon: '📦',
+        title: 'Taille importante',
+        text: 'Cette user story semble très volumineuse. Envisagez de la découper en plusieurs stories plus petites et indépendantes pour faciliter le suivi et réduire les risques.',
+        dimension: 'size'
+      });
+    } else if (size >= 50) {
+      recommendations.push({
+        type: 'warning',
+        icon: '📦',
+        title: 'Taille modérée',
+        text: 'La taille est conséquente. Identifiez les sous-tâches distinctes pour mieux répartir le travail.',
+        dimension: 'size'
+      });
+    }
+
+    // Analyse de la complexité
+    if (complexity >= 75) {
+      recommendations.push({
+        type: 'danger',
+        icon: '🧩',
+        title: 'Complexité élevée',
+        text: 'La complexité technique est importante. Prévoyez un spike technique ou une session de mob programming pour explorer les solutions avant de commencer.',
+        dimension: 'complexity'
+      });
+    } else if (complexity >= 50) {
+      recommendations.push({
+        type: 'warning',
+        icon: '🧩',
+        title: 'Complexité technique',
+        text: 'Assurez-vous que l\'équipe maîtrise les technologies impliquées. Le pair programming pourrait être bénéfique.',
+        dimension: 'complexity'
+      });
+    }
+
+    // Analyse de l'incertitude
+    if (uncertainty >= 75) {
+      recommendations.push({
+        type: 'danger',
+        icon: '❓',
+        title: 'Forte incertitude',
+        text: 'Trop d\'inconnues persistent. Organisez une session de clarification avec le Product Owner et les experts métier avant de vous engager.',
+        dimension: 'uncertainty'
+      });
+    } else if (uncertainty >= 50) {
+      recommendations.push({
+        type: 'warning',
+        icon: '❓',
+        title: 'Incertitude modérée',
+        text: 'Certains aspects restent flous. Validez les hypothèses clés avec le PO et documentez les décisions prises.',
+        dimension: 'uncertainty'
+      });
+    }
+
+    // Analyse du risque
+    if (risk >= 75) {
+      recommendations.push({
+        type: 'danger',
+        icon: '⚠️',
+        title: 'Risque élevé',
+        text: 'Les risques identifiés sont significatifs. Définissez un plan de mitigation et prévoyez des solutions de fallback avant de démarrer.',
+        dimension: 'risk'
+      });
+    } else if (risk >= 50) {
+      recommendations.push({
+        type: 'warning',
+        icon: '⚠️',
+        title: 'Risques à surveiller',
+        text: 'Des risques ont été identifiés. Surveillez-les régulièrement et préparez des alternatives si nécessaire.',
+        dimension: 'risk'
+      });
+    }
+
+    // Analyse de l'effort
+    if (effort >= 75) {
+      recommendations.push({
+        type: 'danger',
+        icon: '💪',
+        title: 'Effort conséquent',
+        text: 'L\'effort requis est important. Planifiez des points de synchronisation réguliers et envisagez de répartir le travail sur plusieurs développeurs.',
+        dimension: 'effort'
+      });
+    } else if (effort >= 50) {
+      recommendations.push({
+        type: 'warning',
+        icon: '💪',
+        title: 'Effort notable',
+        text: 'Prévoyez suffisamment de temps et évitez de surcharger le sprint avec d\'autres tâches complexes.',
+        dimension: 'effort'
+      });
+    }
+
+    // Message global basé sur la moyenne
+    if (recommendations.length === 0) {
+      if (avg <= 25) {
+        recommendations.push({
+          type: 'success',
+          icon: '✅',
+          title: 'Estimation maîtrisée',
+          text: 'Cette estimation est bien calibrée. L\'équipe peut se lancer sereinement dans le développement.'
+        });
+      } else if (avg <= 40) {
+        recommendations.push({
+          type: 'success',
+          icon: '👍',
+          title: 'Bonne estimation',
+          text: 'Les indicateurs sont globalement favorables. Restez vigilants sur les éventuels points de friction.'
+        });
+      }
+    }
+
+    return recommendations;
+  }
+}
+
+/**
+ * Type pour les recommandations
+ */
+export interface Recommendation {
+  type: 'success' | 'warning' | 'danger' | 'info';
+  icon: string;
+  title: string;
+  text: string;
+  dimension?: string;
 }

@@ -1,8 +1,9 @@
-import { Component, OnInit, OnChanges, Input, ViewChild, ElementRef, SimpleChanges } from '@angular/core';
+import { Component, OnInit, OnChanges, Input, Output, EventEmitter, ViewChild, ElementRef, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Chart, ChartConfiguration, ChartData, registerables } from 'chart.js';
 import { Estimation } from '../../models/estimation.model';
 import { SettingsService } from '../../services/settings.service';
+import { EstimationService, Recommendation } from '../../services/estimation.service';
 import * as htmlToImage from 'html-to-image';
 
 Chart.register(...registerables);
@@ -16,12 +17,17 @@ Chart.register(...registerables);
 })
 export class RadarChartComponent implements OnInit, OnChanges {
   @Input() estimation?: Estimation;
+  @Input() showEditButton: boolean = false;
+  @Input() isEditing: boolean = false;
+  @Output() editEstimation = new EventEmitter<void>();
+  @Output() closeEdit = new EventEmitter<void>();
   @ViewChild('chartCanvas', { static: true }) chartCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('exportContainer', { static: true }) exportContainer!: ElementRef<HTMLDivElement>;
   
   private chart?: Chart;
   isExporting = false;
   copySuccess = false;
+  showRecommendations = false;
 
   // T-shirt sizes avec leurs ranges de points de complexité (progression Fibonacci)
   tShirtSizes = [
@@ -38,38 +44,44 @@ export class RadarChartComponent implements OnInit, OnChanges {
     complexity: [
       { label: 'Aucune', value: 0 },
       { label: 'Simple', value: 25 },
-      { label: 'Moyenne', value: 50 },
+      { label: 'Modérée', value: 50 },
       { label: 'Complexe', value: 75 },
-      { label: 'Impossible', value: 100 }
+      { label: 'Extrême', value: 100 }
     ],
     uncertainty: [
       { label: 'Aucune', value: 0 },
       { label: 'Faible', value: 25 },
-      { label: 'Moyenne', value: 50 },
+      { label: 'Modérée', value: 50 },
       { label: 'Élevée', value: 75 },
       { label: 'Totale', value: 100 }
     ],
     risk: [
       { label: 'Aucun', value: 0 },
-      { label: 'Faible', value: 33 },
-      { label: 'Moyen', value: 66 },
-      { label: 'Élevé', value: 100 }
+      { label: 'Faible', value: 25 },
+      { label: 'Modéré', value: 50 },
+      { label: 'Élevé', value: 75 },
+      { label: 'Critique', value: 100 }
     ],
     size: [
-      { label: 'Petit', value: 0 },
-      { label: 'Moyen', value: 33 },
-      { label: 'Grand', value: 66 },
+      { label: 'Minuscule', value: 0 },
+      { label: 'Petit', value: 25 },
+      { label: 'Moyen', value: 50 },
+      { label: 'Grand', value: 75 },
       { label: 'Énorme', value: 100 }
     ],
     effort: [
-      { label: 'Petit', value: 0 },
-      { label: 'Moyen', value: 33 },
-      { label: 'Grand', value: 66 },
-      { label: 'Inconnu', value: 100 }
+      { label: 'Fluide', value: 0 },
+      { label: 'Supportable', value: 25 },
+      { label: 'Demandant', value: 50 },
+      { label: 'Pénible', value: 75 },
+      { label: 'Éprouvant', value: 100 }
     ]
   };
 
-  constructor(private settingsService: SettingsService) {}
+  constructor(
+    private settingsService: SettingsService,
+    private estimationService: EstimationService
+  ) {}
 
   ngOnInit(): void {
     this.createChart();
@@ -106,6 +118,7 @@ export class RadarChartComponent implements OnInit, OnChanges {
           r: {
             beginAtZero: true,
             max: 100,
+            startAngle: 0,
             ticks: {
               stepSize: 20,
               display: false
@@ -115,10 +128,20 @@ export class RadarChartComponent implements OnInit, OnChanges {
             },
             pointLabels: {
               font: {
-                size: 14,
+                size: 13,
                 weight: 'bold'
               },
-              color: '#374151'
+              color: (context) => {
+                // Couleurs correspondant aux badges CURSE
+                const colors = [
+                  'rgba(234, 179, 8, 1)',    // Complexity - Yellow
+                  'rgba(147, 51, 234, 1)',   // Uncertainty - Purple
+                  'rgba(239, 68, 68, 1)',    // Risk - Red
+                  'rgba(34, 197, 94, 1)',    // Size - Green
+                  'rgba(59, 130, 246, 1)'    // Effort - Blue
+                ];
+                return colors[context.index] || '#374151';
+              }
             }
           }
         },
@@ -151,62 +174,21 @@ export class RadarChartComponent implements OnInit, OnChanges {
       };
     }
 
-    // Graduations spécifiques pour chaque axe CURSE (en français - synchronisé avec le formulaire)
-    const graduations = {
-      complexity: [
-        { label: 'Aucune', value: 0 },
-        { label: 'Simple', value: 25 },
-        { label: 'Moyenne', value: 50 },
-        { label: 'Complexe', value: 75 },
-        { label: 'Impossible', value: 100 }
-      ],
-      uncertainty: [
-        { label: 'Aucune', value: 0 },
-        { label: 'Faible', value: 25 },
-        { label: 'Moyenne', value: 50 },
-        { label: 'Élevée', value: 75 },
-        { label: 'Totale', value: 100 }
-      ],
-      risk: [
-        { label: 'Aucun', value: 0 },
-        { label: 'Faible', value: 33 },
-        { label: 'Moyen', value: 66 },
-        { label: 'Élevé', value: 100 }
-      ],
-      size: [
-        { label: 'Petit', value: 0 },
-        { label: 'Moyen', value: 33 },
-        { label: 'Grand', value: 66 },
-        { label: 'Énorme', value: 100 }
-      ],
-      effort: [
-        { label: 'Petit', value: 0 },
-        { label: 'Moyen', value: 33 },
-        { label: 'Grand', value: 66 },
-        { label: 'Inconnu', value: 100 }
-      ]
-    };
-
-    const getValue = (label: string, axis: keyof typeof graduations): number => {
-      const grads = graduations[axis];
-      const grad = grads.find(g => g.label.toLowerCase() === label.toLowerCase());
-      return grad?.value || 0;
-    };
-
     // Obtenir la couleur basée sur la T-shirt size
     const tShirt = this.getTShirtSize();
 
+    // Utiliser directement les valeurs numériques (système analogique)
     return {
       labels: ['Complexité', 'Incertitude', 'Risque', 'Taille', 'Effort'],
       datasets: [
         {
           label: this.estimation.name,
           data: [
-            getValue(this.estimation.complexity, 'complexity'),
-            getValue(this.estimation.uncertainty, 'uncertainty'),
-            getValue(this.estimation.risk, 'risk'),
-            getValue(this.estimation.size, 'size'),
-            getValue(this.estimation.effort, 'effort')
+            this.estimation.complexity,
+            this.estimation.uncertainty,
+            this.estimation.risk,
+            this.estimation.size,
+            this.estimation.effort
           ],
           backgroundColor: tShirt.fillColor,
           borderColor: tShirt.borderColor,
@@ -254,20 +236,15 @@ export class RadarChartComponent implements OnInit, OnChanges {
    * Calcule la moyenne CURSE (0-100) à partir des 5 axes de l'estimation
    */
   getCurseAverage(): number {
-    if (!this.estimation) return 50;
+    if (!this.estimation) return 0;
     
-    const getValue = (label: string, axis: keyof typeof this.graduations): number => {
-      const grads = this.graduations[axis];
-      const grad = grads.find(g => g.label.toLowerCase() === label.toLowerCase());
-      return grad?.value || 50;
-    };
-
+    // Utiliser directement les valeurs numériques
     return (
-      getValue(this.estimation.complexity, 'complexity') +
-      getValue(this.estimation.uncertainty, 'uncertainty') +
-      getValue(this.estimation.risk, 'risk') +
-      getValue(this.estimation.size, 'size') +
-      getValue(this.estimation.effort, 'effort')
+      this.estimation.complexity +
+      this.estimation.uncertainty +
+      this.estimation.risk +
+      this.estimation.size +
+      this.estimation.effort
     ) / 5;
   }
 
@@ -307,20 +284,28 @@ export class RadarChartComponent implements OnInit, OnChanges {
    */
   getValueForDimension(dimension: 'complexity' | 'uncertainty' | 'risk' | 'size' | 'effort'): number {
     if (!this.estimation) return 0;
-    const label = this.estimation[dimension];
-    const grads = this.graduations[dimension];
-    const grad = grads.find(g => g.label.toLowerCase() === label.toLowerCase());
-    return grad?.value || 0;
+    // Utiliser directement la valeur numérique
+    return this.estimation[dimension];
   }
 
   /**
-   * Retourne l'index de graduation pour une dimension (pour afficher les niveaux)
+   * Retourne l'index de graduation le plus proche pour une dimension (pour afficher les niveaux)
    */
   getGraduationIndex(dimension: 'complexity' | 'uncertainty' | 'risk' | 'size' | 'effort'): number {
     if (!this.estimation) return 0;
-    const label = this.estimation[dimension];
+    const value = this.estimation[dimension];
     const grads = this.graduations[dimension];
-    return grads.findIndex(g => g.label.toLowerCase() === label.toLowerCase());
+    // Trouver la graduation la plus proche
+    let closestIndex = 0;
+    let closestDiff = Math.abs(grads[0].value - value);
+    for (let i = 1; i < grads.length; i++) {
+      const diff = Math.abs(grads[i].value - value);
+      if (diff < closestDiff) {
+        closestDiff = diff;
+        closestIndex = i;
+      }
+    }
+    return closestIndex;
   }
 
   /**
@@ -335,6 +320,26 @@ export class RadarChartComponent implements OnInit, OnChanges {
    */
   getGraduations(dimension: 'complexity' | 'uncertainty' | 'risk' | 'size' | 'effort'): { label: string; value: number }[] {
     return this.graduations[dimension];
+  }
+
+  /**
+   * Retourne le label de la graduation la plus proche pour une dimension donnée
+   */
+  getClosestGraduationLabel(dimension: 'complexity' | 'uncertainty' | 'risk' | 'size' | 'effort'): string {
+    if (!this.estimation) return '';
+    const value = this.estimation[dimension];
+    const grads = this.graduations[dimension];
+    // Trouver la graduation la plus proche
+    let closest = grads[0];
+    let closestDiff = Math.abs(grads[0].value - value);
+    for (let i = 1; i < grads.length; i++) {
+      const diff = Math.abs(grads[i].value - value);
+      if (diff < closestDiff) {
+        closestDiff = diff;
+        closest = grads[i];
+      }
+    }
+    return closest.label;
   }
 
   /**
@@ -378,69 +383,39 @@ export class RadarChartComponent implements OnInit, OnChanges {
   }
 
   /**
+   * Toggle l'affichage des recommandations
+   */
+  toggleRecommendations(): void {
+    this.showRecommendations = !this.showRecommendations;
+  }
+
+  /**
    * Retourne une description du niveau global avec suggestion spécifique
    */
   getOverallDescription(): string {
-    if (!this.estimation) return '';
-    
-    const size = this.getValueForDimension('size');
-    const complexity = this.getValueForDimension('complexity');
-    const uncertainty = this.getValueForDimension('uncertainty');
-    const risk = this.getValueForDimension('risk');
-    const effort = this.getValueForDimension('effort');
-    
-    // Trouver le facteur le plus problématique
-    const factors = [
-      { name: 'size', value: size },
-      { name: 'complexity', value: complexity },
-      { name: 'uncertainty', value: uncertainty },
-      { name: 'risk', value: risk },
-      { name: 'effort', value: effort }
-    ];
-    
-    const maxFactor = factors.reduce((a, b) => a.value > b.value ? a : b);
-    
-    // Si tout est bas, message positif
-    if (maxFactor.value <= 33) {
-      return 'Estimation bien maîtrisée - Prête à être développée';
-    }
-    
-    // Suggestions spécifiques selon le facteur dominant
-    if (maxFactor.name === 'size' && size >= 66) {
-      return size >= 100 
-        ? 'Taille énorme → Diviser en plusieurs user stories plus petites ?'
-        : 'Grande taille → Découper en sous-tâches ?';
-    }
-    
-    if (maxFactor.name === 'complexity' && complexity >= 75) {
-      return complexity >= 100
-        ? 'Complexité très élevée → Organiser une clarification technique ?'
-        : 'Haute complexité → Prévoir un spike technique ?';
-    }
-    
-    if (maxFactor.name === 'uncertainty' && uncertainty >= 50) {
-      if (uncertainty >= 100) return 'Incertitude totale → Clarifier les besoins avec le PO ?';
-      if (uncertainty >= 75) return 'Forte incertitude → Réaliser un POC préalable ?';
-      return 'Incertitude moyenne → Valider les hypothèses ?';
-    }
-    
-    if (maxFactor.name === 'risk' && risk >= 66) {
-      return risk >= 100
-        ? 'Risque élevé → Définir un plan de mitigation ?'
-        : 'Risque moyen → Identifier les scénarios de fallback ?';
-    }
-    
-    if (maxFactor.name === 'effort' && effort >= 66) {
-      return effort >= 100
-        ? 'Effort inconnu → Analyse approfondie nécessaire ?'
-        : 'Effort important → Envisager le pair programming ?';
-    }
-    
-    // Fallback basé sur la moyenne
-    const avg = this.getCurseAverage();
-    if (avg <= 40) return 'Estimation accessible - Complexité maîtrisable';
-    if (avg <= 60) return 'Estimation modérée - Attention aux dépendances';
-    return 'Estimation complexe - Prévoir du temps supplémentaire';
+    const recommendations = this.recommendations;
+    return recommendations.length > 0 ? recommendations[0].text : 'Estimation prête à être développée';
+  }
+
+  /**
+   * Getter pour les recommandations avec cache
+   */
+  get recommendations(): Recommendation[] {
+    return this.estimationService.getRecommendations(this.estimation);
+  }
+
+  /**
+   * Retourne le nombre de recommandations à afficher dans le badge
+   */
+  get recommendationsCount(): number {
+    return this.recommendations.length;
+  }
+
+  /**
+   * Retourne true s'il y a des recommandations importantes (warning ou danger)
+   */
+  get hasImportantRecommendations(): boolean {
+    return this.recommendations.some(r => r.type === 'warning' || r.type === 'danger');
   }
 
   /**

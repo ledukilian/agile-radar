@@ -1,3 +1,9 @@
+// Host prend toute la hauteur
+:host {
+  display: block;
+  height: 100%;
+}
+
 // Styles pour les sliders modernes
 .slider-container {
   position: relative;

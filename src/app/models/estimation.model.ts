@@ -5,11 +5,11 @@ export interface Estimation {
   description?: string;
   date?: string; // Date de l'estimation
   author?: string; // Auteur de l'estimation
-  complexity: string; // Taille de t-shirt
-  uncertainty: string;
-  risk: string;
-  size: string;
-  effort: string;
+  complexity: number; // Valeur continue 0-100 (analogique)
+  uncertainty: number;
+  risk: number;
+  size: number;
+  effort: number;
   createdAt: Date;
   updatedAt: Date;
 }

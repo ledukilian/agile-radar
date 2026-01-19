@@ -1,10 +1,25 @@
 <!-- Version compacte -->
-<div *ngIf="compact" class="glass-card rounded-2xl flex flex-col">
-  <div class="p-4 lg:p-6 pb-8 lg:pb-14 flex flex-col">
+<div *ngIf="compact" class="glass-card rounded-2xl flex flex-col overflow-hidden">
+  <div class="p-4 lg:p-6 flex flex-col flex-1 overflow-hidden">
     <!-- En-tête avec titre et onglets -->
     <div class="mb-4 lg:mb-6 pb-3 lg:pb-4 border-b glass-divider shrink-0">
       <div class="flex justify-between items-center mb-3">
-        <h2 class="text-lg lg:text-xl font-bold text-glass-primary">Paramètres</h2>
+        <div class="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-glass-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <h2 class="text-lg lg:text-xl font-bold text-glass-primary">Détails</h2>
+        </div>
+        <button 
+          (click)="closeForm.emit()"
+          class="p-1.5 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-all"
+          title="Fermer le mode édition"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
       
       <!-- Système d'onglets -->
@@ -35,10 +50,23 @@
           </svg>
           <span class="hidden sm:inline">Évaluation</span>
         </button>
+        <button
+          (click)="setActiveTab('conseils')"
+          class="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-xs lg:text-sm font-medium rounded-lg transition-all duration-200"
+          [ngClass]="{
+            'tab-active text-glass-primary': activeTab === 'conseils',
+            'text-glass-secondary hover:text-glass-primary hover:bg-white/5': activeTab !== 'conseils'
+          }"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+          </svg>
+          <span class="hidden sm:inline">Conseils</span>
+        </button>
       </div>
     </div>
 
-    <div class="space-y-4 lg:space-y-6">
+    <div class="space-y-4 lg:space-y-6 overflow-y-auto flex-1">
     
     <!-- Onglet 1 : Paramètres de base -->
     <div *ngIf="activeTab === 'base'" class="space-y-4">
@@ -76,7 +104,7 @@
           [(ngModel)]="formData.description"
           (ngModelChange)="onFieldChange()"
           [maxlength]="charLimits.description"
-          rows="3"
+          rows="5"
           placeholder="Description détaillée de la tâche..."
           class="glass-input w-full px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg text-sm resize-none"
         ></textarea>
@@ -134,14 +162,15 @@
     </div>
 
     <!-- Onglet 2 : CURSE Sliders compacts -->
-    <div *ngIf="activeTab === 'curseurs'" class="space-y-4 lg:space-y-6">
+    <div *ngIf="activeTab === 'curseurs'" class="space-y-4 lg:space-y-6 pb-8">
       <!-- Complexity -->
       <div class="px-2 lg:px-4 pb-3 lg:pb-4">
-        <div class="mb-2">
-          <label class="text-sm font-semibold text-glass-primary">
-            <span class="font-bold text-yellow-500 text-base">C</span> - Complexité
-          </label>
-          <p class="text-xs text-glass-muted mt-0.5 hidden sm:block">Difficulté technique ou fonctionnelle</p>
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold text-glass-secondary">Complexité</span>
+            <span class="text-[10px] text-glass-muted">Difficulté technique ou fonctionnelle</span>
+          </div>
+          <span class="text-sm font-bold text-yellow-500 shrink-0">{{ getGraduationForValue(formData.complexity, 'complexity')?.label }}</span>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -171,11 +200,12 @@
 
       <!-- Uncertainty -->
       <div class="px-2 lg:px-4 pb-3 lg:pb-4">
-        <div class="mb-2">
-          <label class="text-sm font-semibold text-glass-primary">
-            <span class="font-bold text-purple-500 text-base">U</span> - Incertitude
-          </label>
-          <p class="text-xs text-glass-muted mt-0.5 hidden sm:block">Zones floues, manque d'informations</p>
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold text-glass-secondary">Incertitude</span>
+            <span class="text-[10px] text-glass-muted">Zones floues, manque d'informations</span>
+          </div>
+          <span class="text-sm font-bold text-purple-500 shrink-0">{{ getGraduationForValue(formData.uncertainty, 'uncertainty')?.label }}</span>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -205,11 +235,12 @@
 
       <!-- Risk -->
       <div class="px-2 lg:px-4 pb-3 lg:pb-4">
-        <div class="mb-2">
-          <label class="text-sm font-semibold text-glass-primary">
-            <span class="font-bold text-red-500 text-base">R</span> - Risque
-          </label>
-          <p class="text-xs text-glass-muted mt-0.5 hidden sm:block">Dépendances, impacts, dangers potentiels</p>
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold text-glass-secondary">Risque</span>
+            <span class="text-[10px] text-glass-muted">Dépendances, impacts, dangers potentiels</span>
+          </div>
+          <span class="text-sm font-bold text-red-500 shrink-0">{{ getGraduationForValue(formData.risk, 'risk')?.label }}</span>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -239,11 +270,12 @@
 
       <!-- Size -->
       <div class="px-2 lg:px-4 pb-3 lg:pb-4">
-        <div class="mb-2">
-          <label class="text-sm font-semibold text-glass-primary">
-            <span class="font-bold text-green-500 text-base">S</span> - Taille
-          </label>
-          <p class="text-xs text-glass-muted mt-0.5 hidden sm:block">Ampleur globale du travail</p>
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold text-glass-secondary">Taille</span>
+            <span class="text-[10px] text-glass-muted">Volume de travail à réaliser</span>
+          </div>
+          <span class="text-sm font-bold text-green-500 shrink-0">{{ getGraduationForValue(formData.size, 'size')?.label }}</span>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -273,11 +305,12 @@
 
       <!-- Effort -->
       <div class="px-2 lg:px-4">
-        <div class="mb-2">
-          <label class="text-sm font-semibold text-glass-primary">
-            <span class="font-bold text-blue-500 text-base">E</span> - Effort
-          </label>
-          <p class="text-xs text-glass-muted mt-0.5 hidden sm:block">Charge de travail estimée</p>
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold text-glass-secondary">Effort</span>
+            <span class="text-[10px] text-glass-muted">Degré de pénibilité</span>
+          </div>
+          <span class="text-sm font-bold text-blue-500 shrink-0">{{ getGraduationForValue(formData.effort, 'effort')?.label }}</span>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -307,6 +340,61 @@
 
     </div>
     <!-- Fin onglet curseurs -->
+
+    <!-- Onglet 3 : Conseils -->
+    <div *ngIf="activeTab === 'conseils'" class="space-y-3">
+      <ng-container *ngFor="let rec of recommendations">
+        <div 
+          class="flex items-start gap-3 p-3 rounded-lg transition-all"
+          [ngClass]="{
+            'bg-green-500/10 border border-green-500/20': rec.type === 'success',
+            'bg-amber-500/10 border border-amber-500/20': rec.type === 'warning',
+            'bg-red-500/10 border border-red-500/20': rec.type === 'danger',
+            'bg-blue-500/10 border border-blue-500/20': rec.type === 'info'
+          }"
+        >
+          <span class="text-lg shrink-0">{{ rec.icon }}</span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <span 
+                class="text-sm font-semibold"
+                [ngClass]="{
+                  'text-green-400': rec.type === 'success',
+                  'text-amber-400': rec.type === 'warning',
+                  'text-red-400': rec.type === 'danger',
+                  'text-blue-400': rec.type === 'info'
+                }"
+              >
+                {{ rec.title }}
+              </span>
+              <span 
+                *ngIf="rec.dimension"
+                class="w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold text-white shrink-0"
+                [ngClass]="{
+                  'bg-yellow-500': rec.dimension === 'complexity',
+                  'bg-purple-500': rec.dimension === 'uncertainty',
+                  'bg-red-500': rec.dimension === 'risk',
+                  'bg-green-500': rec.dimension === 'size',
+                  'bg-blue-500': rec.dimension === 'effort'
+                }"
+              >
+                {{ rec.dimension === 'complexity' ? 'C' : rec.dimension === 'uncertainty' ? 'U' : rec.dimension === 'risk' ? 'R' : rec.dimension === 'size' ? 'S' : 'E' }}
+              </span>
+            </div>
+            <p class="text-xs text-glass-secondary leading-relaxed">{{ rec.text }}</p>
+          </div>
+        </div>
+      </ng-container>
+      
+      <!-- Message si aucun conseil -->
+      <div *ngIf="!recommendations || recommendations.length === 0" class="text-center py-8 text-glass-muted">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+        <p class="text-sm">Aucun conseil pour cette estimation</p>
+      </div>
+    </div>
+    <!-- Fin onglet conseils -->
     </div>
   </div>
 </div>
@@ -362,13 +450,12 @@
     <div class="space-y-6">
       <!-- Complexity -->
       <div class="glass-inner rounded-lg px-4 py-3">
-        <div class="flex justify-between items-center mb-2">
-          <label class="text-sm font-semibold text-glass-primary">
-            <span class="font-bold text-yellow-500 text-base">C</span> - Complexity (Complexité)
-          </label>
-          <span class="text-sm font-bold text-yellow-500 bg-yellow-500/20 px-3 py-1 rounded-lg">
-            {{ getGraduationForValue(formData.complexity, 'complexity')?.label || '' }}
-          </span>
+        <div class="mb-2">
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold text-glass-secondary">Complexité</span>
+            <span class="text-[10px] text-glass-muted">Difficulté technique ou fonctionnelle</span>
+            <span class="text-base font-bold text-yellow-500">{{ getGraduationForValue(formData.complexity, 'complexity')?.label }}</span>
+          </div>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -394,18 +481,16 @@
             class="slider-yellow"
           />
         </div>
-        <p class="text-xs text-glass-muted mt-2">Difficulté technique ou fonctionnelle</p>
       </div>
 
       <!-- Uncertainty -->
       <div class="glass-inner rounded-lg px-4 py-3">
-        <div class="flex justify-between items-center mb-2">
-          <label class="text-sm font-semibold text-glass-primary">
-            <span class="font-bold text-purple-500 text-base">U</span> - Uncertainty (Incertitude)
-          </label>
-          <span class="text-sm font-bold text-purple-500 bg-purple-500/20 px-3 py-1 rounded-lg">
-            {{ getGraduationForValue(formData.uncertainty, 'uncertainty')?.label || '' }}
-          </span>
+        <div class="mb-2">
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold text-glass-secondary">Incertitude</span>
+            <span class="text-[10px] text-glass-muted">Zones floues, manque d'informations</span>
+            <span class="text-base font-bold text-purple-500">{{ getGraduationForValue(formData.uncertainty, 'uncertainty')?.label }}</span>
+          </div>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -431,18 +516,16 @@
             class="slider-purple"
           />
         </div>
-        <p class="text-xs text-glass-muted mt-2">Zones floues, manque d'informations</p>
       </div>
 
       <!-- Risk -->
       <div class="glass-inner rounded-lg px-4 py-3">
-        <div class="flex justify-between items-center mb-2">
-          <label class="text-sm font-semibold text-glass-primary">
-            <span class="font-bold text-red-500 text-base">R</span> - Risk (Risque)
-          </label>
-          <span class="text-sm font-bold text-red-500 bg-red-500/20 px-3 py-1 rounded-lg">
-            {{ getGraduationForValue(formData.risk, 'risk')?.label || '' }}
-          </span>
+        <div class="mb-2">
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold text-glass-secondary">Risque</span>
+            <span class="text-[10px] text-glass-muted">Dépendances, impacts, dangers potentiels</span>
+            <span class="text-base font-bold text-red-500">{{ getGraduationForValue(formData.risk, 'risk')?.label }}</span>
+          </div>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -468,18 +551,16 @@
             class="slider-red"
           />
         </div>
-        <p class="text-xs text-glass-muted mt-2">Dépendances, impacts, dangers potentiels</p>
       </div>
 
       <!-- Size -->
       <div class="glass-inner rounded-lg px-4 py-3">
-        <div class="flex justify-between items-center mb-2">
-          <label class="text-sm font-semibold text-glass-primary">
-            <span class="font-bold text-green-500 text-base">S</span> - Size (Taille / Scope)
-          </label>
-          <span class="text-sm font-bold text-green-500 bg-green-500/20 px-3 py-1 rounded-lg">
-            {{ getGraduationForValue(formData.size, 'size')?.label || '' }}
-          </span>
+        <div class="mb-2">
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold text-glass-secondary">Taille</span>
+            <span class="text-[10px] text-glass-muted">Volume de travail à réaliser</span>
+            <span class="text-base font-bold text-green-500">{{ getGraduationForValue(formData.size, 'size')?.label }}</span>
+          </div>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -505,18 +586,16 @@
             class="slider-green"
           />
         </div>
-        <p class="text-xs text-glass-muted mt-2">Ampleur globale du travail</p>
       </div>
 
       <!-- Effort -->
       <div class="glass-inner rounded-lg px-4 py-3 pb-8">
-        <div class="flex justify-between items-center mb-2">
-          <label class="text-sm font-semibold text-glass-primary">
-            <span class="font-bold text-orange-500 text-base">E</span> - Effort (Effort)
-          </label>
-          <span class="text-sm font-bold text-orange-500 bg-orange-500/20 px-3 py-1 rounded-lg">
-            {{ getGraduationForValue(formData.effort, 'effort')?.label || '' }}
-          </span>
+        <div class="mb-2">
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold text-glass-secondary">Effort</span>
+            <span class="text-[10px] text-glass-muted">Degré de pénibilité</span>
+            <span class="text-base font-bold text-orange-500">{{ getGraduationForValue(formData.effort, 'effort')?.label }}</span>
+          </div>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -542,7 +621,6 @@
             class="slider-orange"
           />
         </div>
-        <p class="text-xs text-glass-muted mt-2">Charge de travail estimée</p>
       </div>
 
     </div>

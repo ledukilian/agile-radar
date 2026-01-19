@@ -1,21 +1,38 @@
 import { Component, OnInit, Input, Output, EventEmitter, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Estimation } from '../../models/estimation.model';
 import { EstimationService } from '../../services/estimation.service';
 
 @Component({
   selector: 'app-estimation-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './estimation-list.component.html',
   styleUrl: './estimation-list.component.scss'
 })
 export class EstimationListComponent implements OnInit {
   @Input() selectedId?: string;
   @Output() selectEstimation = new EventEmitter<Estimation | null>();
+  @Output() newEstimationCreated = new EventEmitter<Estimation>();
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   estimations: Estimation[] = [];
+  searchQuery: string = '';
+
+  /**
+   * Retourne les estimations filtrées par la recherche
+   */
+  get filteredEstimations(): Estimation[] {
+    if (!this.searchQuery.trim()) {
+      return this.estimations;
+    }
+    const query = this.searchQuery.toLowerCase().trim();
+    return this.estimations.filter(estimation =>
+      estimation.name.toLowerCase().includes(query) ||
+      estimation.description?.toLowerCase().includes(query)
+    );
+  }
 
   // T-shirt sizes avec leurs ranges de points de complexité (progression Fibonacci)
   tShirtSizes = [
@@ -32,34 +49,37 @@ export class EstimationListComponent implements OnInit {
     complexity: [
       { label: 'Aucune', value: 0 },
       { label: 'Simple', value: 25 },
-      { label: 'Moyenne', value: 50 },
+      { label: 'Modérée', value: 50 },
       { label: 'Complexe', value: 75 },
-      { label: 'Impossible', value: 100 }
+      { label: 'Extrême', value: 100 }
     ],
     uncertainty: [
       { label: 'Aucune', value: 0 },
       { label: 'Faible', value: 25 },
-      { label: 'Moyenne', value: 50 },
+      { label: 'Modérée', value: 50 },
       { label: 'Élevée', value: 75 },
       { label: 'Totale', value: 100 }
     ],
     risk: [
       { label: 'Aucun', value: 0 },
-      { label: 'Faible', value: 33 },
-      { label: 'Moyen', value: 66 },
-      { label: 'Élevé', value: 100 }
+      { label: 'Faible', value: 25 },
+      { label: 'Modéré', value: 50 },
+      { label: 'Élevé', value: 75 },
+      { label: 'Critique', value: 100 }
     ],
     size: [
-      { label: 'Petit', value: 0 },
-      { label: 'Moyen', value: 33 },
-      { label: 'Grand', value: 66 },
+      { label: 'Minuscule', value: 0 },
+      { label: 'Petit', value: 25 },
+      { label: 'Moyen', value: 50 },
+      { label: 'Grand', value: 75 },
       { label: 'Énorme', value: 100 }
     ],
     effort: [
-      { label: 'Petit', value: 0 },
-      { label: 'Moyen', value: 33 },
-      { label: 'Grand', value: 66 },
-      { label: 'Inconnu', value: 100 }
+      { label: 'Fluide', value: 0 },
+      { label: 'Supportable', value: 25 },
+      { label: 'Demandant', value: 50 },
+      { label: 'Pénible', value: 75 },
+      { label: 'Éprouvant', value: 100 }
     ]
   };
 
@@ -86,36 +106,32 @@ export class EstimationListComponent implements OnInit {
   }
 
   onNewEstimation(): void {
-    // Créer une nouvelle estimation avec des valeurs au minimum
+    // Créer une nouvelle estimation avec des valeurs au minimum (0)
     const newEstimation = this.estimationService.createEstimation({
       name: 'Nouvelle estimation',
       description: '',
-      complexity: 'Aucune',
-      uncertainty: 'Aucune',
-      risk: 'Aucun',
-      size: 'Petit',
-      effort: 'Petit'
+      complexity: 0,
+      uncertainty: 0,
+      risk: 0,
+      size: 0,
+      effort: 0
     });
-    // Sélectionner automatiquement la nouvelle estimation
-    this.selectEstimation.emit(newEstimation);
+    // Émettre l'événement de création (différent de la sélection)
+    // Cela permettra d'ouvrir directement le mode édition
+    this.newEstimationCreated.emit(newEstimation);
   }
 
   /**
    * Calcule les points de complexité pour une estimation donnée
    */
   calculateComplexityPoints(estimation: Estimation): number {
-    const getValue = (label: string, axis: keyof typeof this.graduations): number => {
-      const grads = this.graduations[axis];
-      const grad = grads.find(g => g.label.toLowerCase() === label.toLowerCase());
-      return grad?.value || 50;
-    };
-
+    // Utiliser directement les valeurs numériques (système analogique)
     const curseAverage = (
-      getValue(estimation.complexity, 'complexity') +
-      getValue(estimation.uncertainty, 'uncertainty') +
-      getValue(estimation.risk, 'risk') +
-      getValue(estimation.size, 'size') +
-      getValue(estimation.effort, 'effort')
+      estimation.complexity +
+      estimation.uncertainty +
+      estimation.risk +
+      estimation.size +
+      estimation.effort
     ) / 5;
 
     const normalized = curseAverage / 100;
@@ -206,5 +222,18 @@ export class EstimationListComponent implements OnInit {
       input.value = '';
     };
     reader.readAsText(file);
+  }
+
+  /**
+   * Supprime toutes les estimations après confirmation
+   */
+  onDeleteAll(): void {
+    const count = this.estimations.length;
+    if (count === 0) return;
+    
+    if (confirm(`Êtes-vous sûr de vouloir supprimer toutes vos données ?\n\nCette action supprimera ${count} estimation(s) et est irréversible.`)) {
+      this.estimationService.deleteAllEstimations();
+      this.selectEstimation.emit(null); // Désélectionner l'estimation courante
+    }
   }
 }

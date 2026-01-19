@@ -3,7 +3,7 @@
   <!-- Main Content -->
   <main class="w-full flex-1 flex flex-col overflow-hidden">
     <div class="px-3 sm:px-6 lg:px-8 2xl:px-12 py-4 flex flex-col flex-1 overflow-hidden max-w-[2200px] mx-auto w-full">
-      <div class="flex justify-between items-center mb-4 lg:mb-8 shrink-0">
+      <div class="flex justify-between items-center mb-3 lg:mb-6 shrink-0">
         <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-glass-primary">
           <span class="hidden sm:inline">🐜 Agile Radar</span>
           <span class="sm:hidden">🐜 Radar</span>
@@ -27,11 +27,12 @@
             Radar
           </button>
           <button 
+            *ngIf="isEditing"
             (click)="mobileTab = 'form'"
             [class.active-tab]="mobileTab === 'form'"
             class="mobile-tab px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
           >
-            Paramètres
+            Édition
           </button>
         </div>
       </div>
@@ -44,23 +45,36 @@
             class="flex-1 flex flex-col overflow-hidden"
             [selectedId]="selectedEstimation?.id"
             (selectEstimation)="onSelectEstimation($event)"
+            (newEstimationCreated)="onNewEstimationCreated($event)"
           ></app-estimation-list>
         </div>
 
-        <!-- Colonne 2 : Radar Chart en live -->
-        <div class="flex flex-col rounded-2xl overflow-hidden flex-1 min-w-0" *ngIf="selectedEstimation">
-          <app-radar-chart [estimation]="selectedEstimation"></app-radar-chart>
-        </div>
+        <!-- Colonnes 2 et 3 : Radar + Formulaire/Recommandations (toujours la même largeur) -->
+        <ng-container *ngIf="selectedEstimation">
+          <!-- Colonne 2 : Radar Chart -->
+          <div class="flex flex-col rounded-2xl overflow-hidden flex-1 min-w-0">
+            <app-radar-chart 
+              [estimation]="selectedEstimation"
+              [showEditButton]="!isEditing"
+              [isEditing]="isEditing"
+              (editEstimation)="onStartEditing()"
+              (closeEdit)="onStopEditing()"
+            ></app-radar-chart>
+          </div>
 
-        <!-- Colonne 3 : Formulaire avec curseurs et nom -->
-        <div class="flex flex-col rounded-2xl overflow-hidden flex-1 min-w-0" *ngIf="selectedEstimation">
-          <app-estimation-form
-            [estimation]="selectedEstimation"
-            [compact]="true"
-            (estimationChanged)="onEstimationChanged($event)"
-            (deleteEstimation)="onDeleteEstimation($event)"
-          ></app-estimation-form>
-        </div>
+          <!-- Colonne 3 : Formulaire de détails -->
+          <div class="flex flex-col rounded-2xl overflow-hidden flex-1 min-w-0">
+            <app-estimation-form
+              *ngIf="isEditing"
+              class="h-full"
+              [estimation]="selectedEstimation"
+              [compact]="true"
+              (estimationChanged)="onEstimationChanged($event)"
+              (deleteEstimation)="onDeleteEstimation($event)"
+              (closeForm)="onStopEditing()"
+            ></app-estimation-form>
+          </div>
+        </ng-container>
       </div>
 
       <!-- Mobile/Tablet Layout (<lg) -->
@@ -71,6 +85,7 @@
             class="flex-1 flex flex-col overflow-hidden"
             [selectedId]="undefined"
             (selectEstimation)="onSelectEstimation($event)"
+            (newEstimationCreated)="onNewEstimationCreated($event)"
           ></app-estimation-list>
         </div>
 
@@ -82,21 +97,29 @@
               class="flex-1 flex flex-col overflow-hidden"
               [selectedId]="selectedEstimation?.id"
               (selectEstimation)="onSelectEstimation($event)"
+              (newEstimationCreated)="onNewEstimationCreated($event)"
             ></app-estimation-list>
           </div>
 
           <!-- Tab Radar Chart -->
           <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'chart'">
-            <app-radar-chart [estimation]="selectedEstimation"></app-radar-chart>
+            <app-radar-chart 
+              [estimation]="selectedEstimation"
+              [showEditButton]="true"
+              [isEditing]="isEditing"
+              (editEstimation)="onStartEditing()"
+              (closeEdit)="onStopEditing()"
+            ></app-radar-chart>
           </div>
 
-          <!-- Tab Formulaire -->
-          <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'form'">
+          <!-- Tab Formulaire (seulement en mode édition) -->
+          <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'form' && isEditing">
             <app-estimation-form
               [estimation]="selectedEstimation"
               [compact]="true"
               (estimationChanged)="onEstimationChanged($event)"
               (deleteEstimation)="onDeleteEstimation($event)"
+              (closeForm)="onStopEditing()"
             ></app-estimation-form>
           </div>
         </ng-container>
@@ -105,7 +128,7 @@
   </main>
 
   <!-- Footer -->
-  <footer class="py-2 px-4 text-right text-glass-muted text-xs shrink-0">
+  <footer class="py-2 px-4 text-right text-gray-400 text-xs shrink-0">
     <div>v{{ appVersion }} • <a href="https://github.com/ledukilian/agile-radar" target="_blank" rel="noopener noreferrer" class="hover:text-glass-secondary underline">GitHub</a></div>
     <div class="hidden sm:block">Made with ❤️ by <a href="https://ledukilian.fr" target="_blank" rel="noopener noreferrer" class="hover:text-glass-secondary underline">Kilian LE DU</a></div>
   </footer>
