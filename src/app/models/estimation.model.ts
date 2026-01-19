@@ -5,6 +5,7 @@ export interface Estimation {
   description?: string;
   date?: string; // Date de l'estimation
   author?: string; // Auteur de l'estimation
+  type?: 'user-story' | 'feature'; // Type d'estimation
   complexity: number; // Valeur continue 0-100 (analogique)
   uncertainty: number;
   risk: number;

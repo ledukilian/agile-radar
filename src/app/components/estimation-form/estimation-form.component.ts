@@ -25,6 +25,11 @@ export class EstimationFormComponent implements OnInit, OnChanges {
   // Recommandations calculées (stockées pour éviter les recalculs dans le template)
   recommendations: Recommendation[] = [];
 
+  // Éditeur JSON (mode avancé)
+  showJsonEditor: boolean = false;
+  jsonEditorContent: string = '';
+  jsonError: string | null = null;
+
   // Limites de caractères pour les champs
   readonly charLimits = {
     name: 80,
@@ -92,6 +97,7 @@ export class EstimationFormComponent implements OnInit, OnChanges {
     description: string;
     date: string;
     author: string;
+    type: 'user-story' | 'feature';
     complexity: number; // Valeur continue 0-100
     uncertainty: number;
     risk: number;
@@ -102,6 +108,7 @@ export class EstimationFormComponent implements OnInit, OnChanges {
     description: '',
     date: new Date().toISOString().split('T')[0],
     author: '',
+    type: 'user-story',
     complexity: 50,
     uncertainty: 50,
     risk: 50,
@@ -164,6 +171,7 @@ export class EstimationFormComponent implements OnInit, OnChanges {
         description: this.estimation.description || '',
         date: defaultDate,
         author: this.estimation.author || defaultAuthor,
+        type: this.estimation.type || 'user-story',
         complexity: this.estimation.complexity,
         uncertainty: this.estimation.uncertainty,
         risk: this.estimation.risk,
@@ -177,6 +185,7 @@ export class EstimationFormComponent implements OnInit, OnChanges {
         description: '',
         date: new Date().toISOString().split('T')[0],
         author: defaultAuthor,
+        type: 'user-story',
         complexity: 0,
         uncertainty: 0,
         risk: 0,
@@ -184,6 +193,9 @@ export class EstimationFormComponent implements OnInit, OnChanges {
         effort: 0
       };
     }
+    
+    // Mettre à jour le contenu JSON
+    this.updateJsonEditorContent();
   }
 
   private formatDateToInput(date: Date): string {
@@ -258,6 +270,11 @@ export class EstimationFormComponent implements OnInit, OnChanges {
 
     // Mettre à jour les recommandations
     this.updateRecommendations();
+    
+    // Synchroniser l'éditeur JSON si visible
+    if (this.showJsonEditor) {
+      this.updateJsonEditorContent();
+    }
 
     // Émettre une estimation temporaire pour mise à jour live du graphique
     this.emitTemporaryEstimation();
@@ -286,6 +303,7 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       description: this.formData.description,
       date: this.formData.date,
       author: this.formData.author,
+      type: this.formData.type,
       complexity: this.formData.complexity,
       uncertainty: this.formData.uncertainty,
       risk: this.formData.risk,
@@ -314,6 +332,7 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       description: this.formData.description,
       date: this.formData.date,
       author: this.formData.author,
+      type: this.formData.type,
       complexity: this.formData.complexity,
       uncertainty: this.formData.uncertainty,
       risk: this.formData.risk,
@@ -339,6 +358,7 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       description: '',
       date: new Date().toISOString().split('T')[0],
       author: this.getDefaultAuthor(),
+      type: 'user-story',
       complexity: 0,
       uncertainty: 0,
       risk: 0,
@@ -425,6 +445,7 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       description: this.formData.description,
       date: this.formData.date,
       author: this.formData.author,
+      type: this.formData.type,
       complexity: this.formData.complexity,
       uncertainty: this.formData.uncertainty,
       risk: this.formData.risk,
@@ -434,5 +455,112 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       updatedAt: new Date()
     };
     this.recommendations = this.estimationService.getRecommendations(tempEstimation);
+  }
+
+  /**
+   * Toggle l'affichage de l'éditeur JSON
+   */
+  toggleJsonEditor(): void {
+    this.showJsonEditor = !this.showJsonEditor;
+    if (this.showJsonEditor) {
+      this.updateJsonEditorContent();
+    }
+  }
+
+  /**
+   * Met à jour le contenu JSON à partir des données du formulaire
+   */
+  private updateJsonEditorContent(): void {
+    const jsonData = {
+      name: this.formData.name,
+      description: this.formData.description,
+      date: this.formData.date,
+      author: this.formData.author,
+      type: this.formData.type,
+      complexity: this.formData.complexity,
+      uncertainty: this.formData.uncertainty,
+      risk: this.formData.risk,
+      size: this.formData.size,
+      effort: this.formData.effort
+    };
+    this.jsonEditorContent = JSON.stringify(jsonData, null, 2);
+    this.jsonError = null;
+  }
+
+  /**
+   * Appelé quand le contenu JSON est modifié manuellement
+   */
+  onJsonChange(): void {
+    try {
+      const parsed = JSON.parse(this.jsonEditorContent);
+      this.jsonError = null;
+      
+      // Valider et appliquer les valeurs
+      if (typeof parsed.name === 'string') {
+        this.formData.name = parsed.name.substring(0, this.charLimits.name);
+      }
+      if (typeof parsed.description === 'string') {
+        this.formData.description = parsed.description.substring(0, this.charLimits.description);
+      }
+      if (typeof parsed.date === 'string') {
+        this.formData.date = parsed.date;
+      }
+      if (typeof parsed.author === 'string') {
+        this.formData.author = parsed.author.substring(0, this.charLimits.author);
+      }
+      if (parsed.type === 'user-story' || parsed.type === 'feature') {
+        this.formData.type = parsed.type;
+      }
+      
+      // Valider les valeurs numériques (0-100)
+      const numericFields = ['complexity', 'uncertainty', 'risk', 'size', 'effort'] as const;
+      for (const field of numericFields) {
+        if (typeof parsed[field] === 'number') {
+          this.formData[field] = Math.max(0, Math.min(100, parsed[field]));
+        }
+      }
+      
+      // Déclencher la mise à jour
+      this.updateRecommendations();
+      this.emitTemporaryEstimation();
+      
+      // Debounce pour la sauvegarde
+      if (this.formData.name.trim()) {
+        if (this.saveTimeout) {
+          clearTimeout(this.saveTimeout);
+        }
+        this.saveTimeout = setTimeout(() => {
+          this.saveEstimation();
+        }, 500);
+      }
+    } catch (e) {
+      this.jsonError = 'JSON invalide';
+    }
+  }
+
+  /**
+   * Copie le contenu JSON dans le presse-papier
+   */
+  async copyJson(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(this.jsonEditorContent);
+    } catch (e) {
+      // Fallback pour les navigateurs qui ne supportent pas l'API clipboard
+      console.error('Impossible de copier dans le presse-papier', e);
+    }
+  }
+
+  /**
+   * Colle le contenu du presse-papier dans l'éditeur JSON
+   */
+  async pasteJson(): Promise<void> {
+    try {
+      const text = await navigator.clipboard.readText();
+      this.jsonEditorContent = text;
+      this.onJsonChange();
+    } catch (e) {
+      // Fallback pour les navigateurs qui ne supportent pas l'API clipboard
+      console.error('Impossible de lire le presse-papier', e);
+    }
   }
 }

@@ -152,6 +152,7 @@ export class EstimationService {
         description: e.description || '',
         date: e.date || '',
         author: e.author || '',
+        type: (e.type === 'user-story' || e.type === 'feature') ? e.type : undefined,
         complexity: this.migrateValue(e.complexity ?? 0, 'complexity'),
         uncertainty: this.migrateValue(e.uncertainty ?? 0, 'uncertainty'),
         risk: this.migrateValue(e.risk ?? 0, 'risk'),
@@ -278,7 +279,7 @@ export class EstimationService {
     if (size >= 75) {
       recommendations.push({
         type: 'danger',
-        icon: '📦',
+        icon: '❗',
         title: 'Taille importante',
         text: 'Cette user story semble très volumineuse. Envisagez de la découper en plusieurs stories plus petites et indépendantes pour faciliter le suivi et réduire les risques.',
         dimension: 'size'
@@ -286,7 +287,7 @@ export class EstimationService {
     } else if (size >= 50) {
       recommendations.push({
         type: 'warning',
-        icon: '📦',
+        icon: '⚠️',
         title: 'Taille modérée',
         text: 'La taille est conséquente. Identifiez les sous-tâches distinctes pour mieux répartir le travail.',
         dimension: 'size'
@@ -297,7 +298,7 @@ export class EstimationService {
     if (complexity >= 75) {
       recommendations.push({
         type: 'danger',
-        icon: '🧩',
+        icon: '❗',
         title: 'Complexité élevée',
         text: 'La complexité technique est importante. Prévoyez un spike technique ou une session de mob programming pour explorer les solutions avant de commencer.',
         dimension: 'complexity'
@@ -305,7 +306,7 @@ export class EstimationService {
     } else if (complexity >= 50) {
       recommendations.push({
         type: 'warning',
-        icon: '🧩',
+        icon: '⚠️',
         title: 'Complexité technique',
         text: 'Assurez-vous que l\'équipe maîtrise les technologies impliquées. Le pair programming pourrait être bénéfique.',
         dimension: 'complexity'
@@ -316,7 +317,7 @@ export class EstimationService {
     if (uncertainty >= 75) {
       recommendations.push({
         type: 'danger',
-        icon: '❓',
+        icon: '❗',
         title: 'Forte incertitude',
         text: 'Trop d\'inconnues persistent. Organisez une session de clarification avec le Product Owner et les experts métier avant de vous engager.',
         dimension: 'uncertainty'
@@ -324,7 +325,7 @@ export class EstimationService {
     } else if (uncertainty >= 50) {
       recommendations.push({
         type: 'warning',
-        icon: '❓',
+        icon: '⚠️',
         title: 'Incertitude modérée',
         text: 'Certains aspects restent flous. Validez les hypothèses clés avec le PO et documentez les décisions prises.',
         dimension: 'uncertainty'
@@ -335,7 +336,7 @@ export class EstimationService {
     if (risk >= 75) {
       recommendations.push({
         type: 'danger',
-        icon: '⚠️',
+        icon: '❗',
         title: 'Risque élevé',
         text: 'Les risques identifiés sont significatifs. Définissez un plan de mitigation et prévoyez des solutions de fallback avant de démarrer.',
         dimension: 'risk'
@@ -354,7 +355,7 @@ export class EstimationService {
     if (effort >= 75) {
       recommendations.push({
         type: 'danger',
-        icon: '💪',
+        icon: '❗',
         title: 'Effort conséquent',
         text: 'L\'effort requis est important. Planifiez des points de synchronisation réguliers et envisagez de répartir le travail sur plusieurs développeurs.',
         dimension: 'effort'
@@ -362,7 +363,7 @@ export class EstimationService {
     } else if (effort >= 50) {
       recommendations.push({
         type: 'warning',
-        icon: '💪',
+        icon: '⚠️',
         title: 'Effort notable',
         text: 'Prévoyez suffisamment de temps et évitez de surcharger le sprint avec d\'autres tâches complexes.',
         dimension: 'effort'
