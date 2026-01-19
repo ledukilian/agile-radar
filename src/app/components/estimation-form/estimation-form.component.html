@@ -1,20 +1,21 @@
 <!-- Version compacte -->
-<div *ngIf="compact" class="bg-white rounded-lg shadow-lg p-6 h-[85vh] flex flex-col overflow-y-auto overflow-x-hidden">
-  <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
-    <h2 class="text-xl font-bold text-gray-800">Paramètres</h2>
-    <button
-      (click)="onDelete()"
-      class="px-3 py-1 text-red-600 hover:text-red-500 text-sm rounded-lg transition-colors"
-      title="Supprimer cette estimation"
-    >
-      Supprimer
-    </button>
-  </div>
+<div *ngIf="compact" class="glass-card rounded-2xl h-[85vh] flex flex-col overflow-hidden">
+  <div class="p-6 flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+    <div class="flex justify-between items-center mb-6 pb-4 border-b glass-divider shrink-0">
+      <h2 class="text-xl font-bold text-glass-primary">Paramètres</h2>
+      <button
+        (click)="onDelete()"
+        class="px-3 py-1 text-red-400 hover:text-red-300 text-sm rounded-lg transition-colors"
+        title="Supprimer cette estimation"
+      >
+        Supprimer
+      </button>
+    </div>
 
-  <div class="space-y-6 flex-1 overflow-x-hidden">
+    <div class="space-y-6 flex-1 overflow-x-hidden">
     <!-- Nom -->
     <div>
-      <label class="block text-sm font-semibold text-gray-700 mb-2">
+      <label class="block text-sm font-semibold text-glass-secondary mb-2">
         Titre
       </label>
       <input
@@ -22,7 +23,7 @@
         [(ngModel)]="formData.name"
         (ngModelChange)="onFieldChange()"
         placeholder="Ex: Authentification utilisateur"
-        class="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+        class="glass-input w-full px-4 py-2.5 rounded-lg text-sm"
       />
     </div>
 
@@ -31,10 +32,10 @@
       <!-- Complexity -->
       <div class="px-4 pb-4">
         <div class="mb-2">
-          <label class="text-sm font-semibold text-gray-800">
-            <span class="font-bold text-yellow-600 text-base">C</span> - Complexité
+          <label class="text-sm font-semibold text-glass-primary">
+            <span class="font-bold text-yellow-500 text-base">C</span> - Complexité
           </label>
-          <p class="text-xs text-gray-400 mt-0.5">Difficulté technique ou fonctionnelle</p>
+          <p class="text-xs text-glass-muted mt-0.5">Difficulté technique ou fonctionnelle</p>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -65,10 +66,10 @@
       <!-- Uncertainty -->
       <div class="px-4 pb-4">
         <div class="mb-2">
-          <label class="text-sm font-semibold text-gray-800">
-            <span class="font-bold text-purple-600 text-base">U</span> - Incertitude
+          <label class="text-sm font-semibold text-glass-primary">
+            <span class="font-bold text-purple-500 text-base">U</span> - Incertitude
           </label>
-          <p class="text-xs text-gray-400 mt-0.5">Zones floues, manque d'informations</p>
+          <p class="text-xs text-glass-muted mt-0.5">Zones floues, manque d'informations</p>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -99,10 +100,10 @@
       <!-- Risk -->
       <div class="px-4 pb-4">
         <div class="mb-2">
-          <label class="text-sm font-semibold text-gray-800">
-            <span class="font-bold text-red-600 text-base">R</span> - Risque
+          <label class="text-sm font-semibold text-glass-primary">
+            <span class="font-bold text-red-500 text-base">R</span> - Risque
           </label>
-          <p class="text-xs text-gray-400 mt-0.5">Dépendances, impacts, dangers potentiels</p>
+          <p class="text-xs text-glass-muted mt-0.5">Dépendances, impacts, dangers potentiels</p>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -133,10 +134,10 @@
       <!-- Size -->
       <div class="px-4 pb-4">
         <div class="mb-2">
-          <label class="text-sm font-semibold text-gray-800">
-            <span class="font-bold text-green-600 text-base">S</span> - Taille
+          <label class="text-sm font-semibold text-glass-primary">
+            <span class="font-bold text-green-500 text-base">S</span> - Taille
           </label>
-          <p class="text-xs text-gray-400 mt-0.5">Ampleur globale du travail</p>
+          <p class="text-xs text-glass-muted mt-0.5">Ampleur globale du travail</p>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -167,10 +168,10 @@
       <!-- Effort -->
       <div class="px-4">
         <div class="mb-2">
-          <label class="text-sm font-semibold text-gray-800">
-            <span class="font-bold text-blue-600 text-base">E</span> - Effort
+          <label class="text-sm font-semibold text-glass-primary">
+            <span class="font-bold text-blue-500 text-base">E</span> - Effort
           </label>
-          <p class="text-xs text-gray-400 mt-0.5">Charge de travail estimée</p>
+          <p class="text-xs text-glass-muted mt-0.5">Charge de travail estimée</p>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -200,15 +201,16 @@
 
     </div>
   </div>
+  </div>
 </div>
 
 <!-- Version complète (pour édition détaillée si nécessaire) -->
-<div *ngIf="!compact" class="bg-white rounded-lg shadow-lg p-6">
-  <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
-    <h2 class="text-2xl font-bold text-gray-800">⚙️ Paramètres</h2>
+<div *ngIf="!compact" class="glass-card rounded-2xl p-6">
+  <div class="flex justify-between items-center mb-6 pb-4 border-b glass-divider">
+    <h2 class="text-2xl font-bold text-glass-primary">⚙️ Paramètres</h2>
     <button
       (click)="onDelete()"
-      class="px-3 py-1 text-red-600 text-sm rounded-lg hover:bg-red-700 transition-colors"
+      class="px-3 py-1 text-red-400 text-sm rounded-lg hover:text-red-300 transition-colors"
       title="Supprimer cette estimation"
     >
       Supprimer
@@ -218,7 +220,7 @@
   <div class="space-y-6">
     <!-- Nom -->
     <div>
-      <label class="block text-sm font-semibold text-gray-700 mb-2">
+      <label class="block text-sm font-semibold text-glass-secondary mb-2">
         Nom de la tâche / User Story *
       </label>
       <input
@@ -226,13 +228,13 @@
         [(ngModel)]="formData.name"
         (ngModelChange)="onFieldChange()"
         placeholder="Ex: Authentification utilisateur"
-        class="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+        class="glass-input w-full px-4 py-2.5 rounded-lg"
       />
     </div>
 
     <!-- Description -->
     <div>
-      <label class="block text-sm font-semibold text-gray-700 mb-2">
+      <label class="block text-sm font-semibold text-glass-secondary mb-2">
         Description (optionnel)
       </label>
       <textarea
@@ -240,19 +242,19 @@
         (ngModelChange)="onFieldChange()"
         rows="3"
         placeholder="Description détaillée de la tâche..."
-        class="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+        class="glass-input w-full px-4 py-2.5 rounded-lg"
       ></textarea>
     </div>
 
     <!-- CURSE Sliders -->
     <div class="space-y-6">
       <!-- Complexity -->
-      <div class="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+      <div class="glass-inner rounded-lg px-4 py-3">
         <div class="flex justify-between items-center mb-2">
-          <label class="text-sm font-semibold text-gray-800">
-            <span class="font-bold text-yellow-600 text-base">C</span> - Complexity (Complexité)
+          <label class="text-sm font-semibold text-glass-primary">
+            <span class="font-bold text-yellow-500 text-base">C</span> - Complexity (Complexité)
           </label>
-          <span class="text-sm font-bold text-yellow-600 bg-yellow-50 px-3 py-1 rounded-lg">
+          <span class="text-sm font-bold text-yellow-500 bg-yellow-500/20 px-3 py-1 rounded-lg">
             {{ getGraduationForValue(formData.complexity, 'complexity')?.label || '' }}
           </span>
         </div>
@@ -280,16 +282,16 @@
             class="slider-yellow"
           />
         </div>
-        <p class="text-xs text-gray-500 mt-2">Difficulté technique ou fonctionnelle</p>
+        <p class="text-xs text-glass-muted mt-2">Difficulté technique ou fonctionnelle</p>
       </div>
 
       <!-- Uncertainty -->
-      <div class="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+      <div class="glass-inner rounded-lg px-4 py-3">
         <div class="flex justify-between items-center mb-2">
-          <label class="text-sm font-semibold text-gray-800">
-            <span class="font-bold text-purple-600 text-base">U</span> - Uncertainty (Incertitude)
+          <label class="text-sm font-semibold text-glass-primary">
+            <span class="font-bold text-purple-500 text-base">U</span> - Uncertainty (Incertitude)
           </label>
-          <span class="text-sm font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-lg">
+          <span class="text-sm font-bold text-purple-500 bg-purple-500/20 px-3 py-1 rounded-lg">
             {{ getGraduationForValue(formData.uncertainty, 'uncertainty')?.label || '' }}
           </span>
         </div>
@@ -317,16 +319,16 @@
             class="slider-purple"
           />
         </div>
-        <p class="text-xs text-gray-500 mt-2">Zones floues, manque d'informations</p>
+        <p class="text-xs text-glass-muted mt-2">Zones floues, manque d'informations</p>
       </div>
 
       <!-- Risk -->
-      <div class="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+      <div class="glass-inner rounded-lg px-4 py-3">
         <div class="flex justify-between items-center mb-2">
-          <label class="text-sm font-semibold text-gray-800">
-            <span class="font-bold text-red-600 text-base">R</span> - Risk (Risque)
+          <label class="text-sm font-semibold text-glass-primary">
+            <span class="font-bold text-red-500 text-base">R</span> - Risk (Risque)
           </label>
-          <span class="text-sm font-bold text-red-600 bg-red-50 px-3 py-1 rounded-lg">
+          <span class="text-sm font-bold text-red-500 bg-red-500/20 px-3 py-1 rounded-lg">
             {{ getGraduationForValue(formData.risk, 'risk')?.label || '' }}
           </span>
         </div>
@@ -354,16 +356,16 @@
             class="slider-red"
           />
         </div>
-        <p class="text-xs text-gray-500 mt-2">Dépendances, impacts, dangers potentiels</p>
+        <p class="text-xs text-glass-muted mt-2">Dépendances, impacts, dangers potentiels</p>
       </div>
 
       <!-- Size -->
-      <div class="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+      <div class="glass-inner rounded-lg px-4 py-3">
         <div class="flex justify-between items-center mb-2">
-          <label class="text-sm font-semibold text-gray-800">
-            <span class="font-bold text-green-600 text-base">S</span> - Size (Taille / Scope)
+          <label class="text-sm font-semibold text-glass-primary">
+            <span class="font-bold text-green-500 text-base">S</span> - Size (Taille / Scope)
           </label>
-          <span class="text-sm font-bold text-green-600 bg-green-50 px-3 py-1 rounded-lg">
+          <span class="text-sm font-bold text-green-500 bg-green-500/20 px-3 py-1 rounded-lg">
             {{ getGraduationForValue(formData.size, 'size')?.label || '' }}
           </span>
         </div>
@@ -391,16 +393,16 @@
             class="slider-green"
           />
         </div>
-        <p class="text-xs text-gray-500 mt-2">Ampleur globale du travail</p>
+        <p class="text-xs text-glass-muted mt-2">Ampleur globale du travail</p>
       </div>
 
       <!-- Effort -->
-      <div class="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+      <div class="glass-inner rounded-lg px-4 py-3">
         <div class="flex justify-between items-center mb-2">
-          <label class="text-sm font-semibold text-gray-800">
-            <span class="font-bold text-orange-600 text-base">E</span> - Effort (Effort)
+          <label class="text-sm font-semibold text-glass-primary">
+            <span class="font-bold text-orange-500 text-base">E</span> - Effort (Effort)
           </label>
-          <span class="text-sm font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-lg">
+          <span class="text-sm font-bold text-orange-500 bg-orange-500/20 px-3 py-1 rounded-lg">
             {{ getGraduationForValue(formData.effort, 'effort')?.label || '' }}
           </span>
         </div>
@@ -428,7 +430,7 @@
             class="slider-orange"
           />
         </div>
-        <p class="text-xs text-gray-500 mt-2">Charge de travail estimée</p>
+        <p class="text-xs text-glass-muted mt-2">Charge de travail estimée</p>
       </div>
 
     </div>

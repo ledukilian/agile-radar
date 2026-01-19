@@ -1,18 +1,18 @@
 <div class="p-6">
-  <div class="bg-white rounded-lg shadow-lg p-6">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6">⚙️ Paramètres - Tailles de t-shirt</h2>
+  <div class="glass-card rounded-2xl p-6">
+    <h2 class="text-2xl font-bold text-glass-primary mb-6">⚙️ Paramètres - Tailles de t-shirt</h2>
     
-    <p class="text-gray-600 mb-6">
+    <p class="text-glass-secondary mb-6">
       Configurez les tailles de t-shirt utilisées pour les estimations CURSE.
       Chaque taille est associée à une valeur numérique (0-100) pour le diagramme radar.
     </p>
 
     <div class="mb-6">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-semibold text-gray-700">Tailles configurées</h3>
+        <h3 class="text-lg font-semibold text-glass-secondary">Tailles configurées</h3>
         <button
           (click)="addTaille()"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/20"
         >
           + Ajouter une taille
         </button>
@@ -21,37 +21,37 @@
       <div class="space-y-3">
         <div
           *ngFor="let taille of tailles; let i = index"
-          class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+          class="glass-list-item rounded-lg p-4"
         >
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Label</label>
+              <label class="block text-sm font-medium text-glass-secondary mb-1">Label</label>
               <input
                 type="text"
                 [(ngModel)]="taille.label"
                 placeholder="XS, S, M, L, XL..."
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="glass-input w-full px-3 py-2 rounded-md"
                 [readonly]="!isEditing(i)"
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Valeur (0-100)</label>
+              <label class="block text-sm font-medium text-glass-secondary mb-1">Valeur (0-100)</label>
               <input
                 type="number"
                 [(ngModel)]="taille.value"
                 min="0"
                 max="100"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="glass-input w-full px-3 py-2 rounded-md"
                 [readonly]="!isEditing(i)"
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label class="block text-sm font-medium text-glass-secondary mb-1">Description</label>
               <input
                 type="text"
                 [(ngModel)]="taille.description"
                 placeholder="Très faible, Faible..."
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="glass-input w-full px-3 py-2 rounded-md"
                 [readonly]="!isEditing(i)"
               />
             </div>
@@ -59,21 +59,21 @@
               <button
                 *ngIf="!isEditing(i)"
                 (click)="startEditing(i)"
-                class="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+                class="glass-btn px-3 py-2 rounded-md"
               >
                 ✏️ Modifier
               </button>
               <button
                 *ngIf="isEditing(i)"
                 (click)="stopEditing()"
-                class="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                class="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-500 transition-colors"
               >
                 ✓ Valider
               </button>
               <button
                 (click)="removeTaille(i)"
                 [disabled]="tailles.length <= 2"
-                class="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                class="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 🗑️ Supprimer
               </button>
@@ -83,22 +83,22 @@
       </div>
     </div>
 
-    <div class="flex gap-4 justify-end pt-4 border-t border-gray-200">
+    <div class="flex gap-4 justify-end pt-4 border-t glass-divider">
       <button
         (click)="reset()"
-        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+        class="glass-btn px-4 py-2 rounded-lg"
       >
         🔄 Réinitialiser
       </button>
       <button
         (click)="cancel()"
-        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+        class="glass-btn px-4 py-2 rounded-lg"
       >
         Annuler
       </button>
       <button
         (click)="save()"
-        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/20"
       >
         💾 Sauvegarder
       </button>

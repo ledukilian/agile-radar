@@ -12,10 +12,16 @@
   left: 0;
   right: 0;
   height: 8px;
-  background: linear-gradient(to bottom, #e2e8f0 0%, #f1f5f9 100%);
+  background: var(--slider-track-bg, rgba(255, 255, 255, 0.1));
   border-radius: 4px;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 -1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
   overflow: hidden;
+}
+
+// Light mode
+:host-context(.light-mode) .slider-track {
+  background: linear-gradient(to bottom, #e2e8f0 0%, #f1f5f9 100%);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 -1px 0 rgba(255, 255, 255, 0.8);
 }
 
 // Partie colorée (progression)
@@ -87,7 +93,7 @@
     content: '';
     width: 2px;
     height: 18px;
-    background: linear-gradient(to bottom, #94a3b8 0%, #cbd5e1 100%);
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.15) 100%);
     border-radius: 1px;
     margin-top: 5px;
   }
@@ -97,10 +103,21 @@
     margin-top: 4px;
     font-size: 10px;
     font-weight: 600;
-    color: #64748b;
+    color: var(--text-muted, rgba(255, 255, 255, 0.5));
     white-space: nowrap;
     text-transform: uppercase;
     letter-spacing: 0.02em;
+  }
+}
+
+// Light mode graduations
+:host-context(.light-mode) .graduation-mark {
+  &::before {
+    background: linear-gradient(to bottom, #94a3b8 0%, #cbd5e1 100%);
+  }
+  
+  .graduation-label {
+    color: #64748b;
   }
 }
 

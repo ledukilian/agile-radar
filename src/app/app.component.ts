@@ -22,12 +22,22 @@ import { environment } from '../environments/environment';
 export class AppComponent implements OnInit {
   selectedEstimation?: Estimation;
   appVersion = environment.version;
+  isDarkMode = false;
 
   constructor(private estimationService: EstimationService) {}
 
   ngOnInit(): void {
-    // Au démarrage, ne pas sélectionner automatiquement d'estimation
-    // L'utilisateur doit cliquer sur "Nouvelle" ou sélectionner une estimation existante
+    // Charger la préférence de thème depuis le localStorage
+    const savedTheme = localStorage.getItem('agile-radar-theme');
+    if (savedTheme) {
+      this.isDarkMode = savedTheme === 'dark';
+    }
+    // Par défaut : mode clair (isDarkMode = false)
+  }
+
+  toggleTheme(): void {
+    this.isDarkMode = !this.isDarkMode;
+    localStorage.setItem('agile-radar-theme', this.isDarkMode ? 'dark' : 'light');
   }
 
   onSelectEstimation(estimation: Estimation | null): void {
