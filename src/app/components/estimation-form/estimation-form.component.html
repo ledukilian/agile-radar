@@ -104,10 +104,25 @@
           [(ngModel)]="formData.description"
           (ngModelChange)="onFieldChange()"
           [maxlength]="charLimits.description"
-          rows="5"
+          rows="4"
           placeholder="Description détaillée de la tâche..."
           class="glass-input w-full px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg text-sm resize-none"
         ></textarea>
+      </div>
+
+      <!-- Type -->
+      <div>
+        <label class="block text-sm font-semibold text-glass-secondary mb-2">
+          Type
+        </label>
+        <select
+          [(ngModel)]="formData.type"
+          (ngModelChange)="onFieldChange()"
+          class="glass-input w-full px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg text-sm"
+        >
+          <option value="user-story">🧩 User Story</option>
+          <option value="feature">🧱 Feature</option>
+        </select>
       </div>
 
       <!-- Date et Auteur sur la même ligne -->
@@ -143,6 +158,73 @@
             placeholder="Votre nom"
             class="glass-input w-full px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg text-sm"
           />
+        </div>
+      </div>
+
+      <!-- Section JSON (mode avancé) -->
+      <div class="pt-4 border-t glass-divider">
+        <!-- Toggle pour afficher/cacher l'éditeur JSON -->
+        <button
+          (click)="toggleJsonEditor()"
+          class="w-full flex items-center justify-between px-3 py-2 text-xs text-glass-muted hover:text-glass-secondary rounded-lg hover:bg-white/5 transition-all"
+        >
+          <span class="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+            </svg>
+            JSON
+          </span>
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            class="w-4 h-4 transition-transform duration-200"
+            [class.rotate-180]="showJsonEditor"
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor" 
+            stroke-width="2"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <!-- Éditeur JSON (caché par défaut) -->
+        <div *ngIf="showJsonEditor" class="mt-3 space-y-2">
+          <!-- Boutons Copier / Coller -->
+          <div class="flex justify-end gap-2">
+            <button
+              (click)="pasteJson()"
+              class="flex items-center gap-1 px-2 py-1 text-[10px] text-glass-muted hover:text-glass-secondary rounded hover:bg-white/5 transition-all"
+              title="Coller depuis le presse-papier"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              Coller
+            </button>
+            <button
+              (click)="copyJson()"
+              class="flex items-center gap-1 px-2 py-1 text-[10px] text-glass-muted hover:text-glass-secondary rounded hover:bg-white/5 transition-all"
+              title="Copier dans le presse-papier"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Copier
+            </button>
+          </div>
+          <textarea
+            [(ngModel)]="jsonEditorContent"
+            (ngModelChange)="onJsonChange()"
+            rows="12"
+            spellcheck="false"
+            class="glass-input w-full px-3 py-2 rounded-lg text-xs font-mono resize-none"
+            [class.border-red-500]="jsonError"
+            placeholder="JSON de l'estimation..."
+          ></textarea>
+          <p *ngIf="jsonError" class="text-xs text-red-400">{{ jsonError }}</p>
+          <p class="text-[10px] text-glass-muted">
+            Modifiez directement le JSON pour mettre à jour l'estimation.
+          </p>
         </div>
       </div>
 
@@ -367,19 +449,6 @@
               >
                 {{ rec.title }}
               </span>
-              <span 
-                *ngIf="rec.dimension"
-                class="w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold text-white shrink-0"
-                [ngClass]="{
-                  'bg-yellow-500': rec.dimension === 'complexity',
-                  'bg-purple-500': rec.dimension === 'uncertainty',
-                  'bg-red-500': rec.dimension === 'risk',
-                  'bg-green-500': rec.dimension === 'size',
-                  'bg-blue-500': rec.dimension === 'effort'
-                }"
-              >
-                {{ rec.dimension === 'complexity' ? 'C' : rec.dimension === 'uncertainty' ? 'U' : rec.dimension === 'risk' ? 'R' : rec.dimension === 'size' ? 'S' : 'E' }}
-              </span>
             </div>
             <p class="text-xs text-glass-secondary leading-relaxed">{{ rec.text }}</p>
           </div>
@@ -444,6 +513,21 @@
         placeholder="Description détaillée de la tâche..."
         class="glass-input w-full px-4 py-2.5 rounded-lg"
       ></textarea>
+    </div>
+
+    <!-- Type -->
+    <div>
+      <label class="block text-sm font-semibold text-glass-secondary mb-2">
+        Type
+      </label>
+      <select
+        [(ngModel)]="formData.type"
+        (ngModelChange)="onFieldChange()"
+        class="glass-input w-full px-4 py-2.5 rounded-lg"
+      >
+        <option value="user-story">🧩 User Story</option>
+        <option value="feature">🧱 Feature</option>
+      </select>
     </div>
 
     <!-- CURSE Sliders -->
@@ -623,6 +707,73 @@
         </div>
       </div>
 
+    </div>
+
+    <!-- Section JSON (mode avancé) -->
+    <div class="pt-6 border-t glass-divider">
+      <!-- Toggle pour afficher/cacher l'éditeur JSON -->
+      <button
+        (click)="toggleJsonEditor()"
+        class="w-full flex items-center justify-between px-3 py-2 text-xs text-glass-muted hover:text-glass-secondary rounded-lg hover:bg-white/5 transition-all"
+      >
+        <span class="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+          </svg>
+          Mode JSON avancé
+        </span>
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          class="w-4 h-4 transition-transform duration-200"
+          [class.rotate-180]="showJsonEditor"
+          fill="none" 
+          viewBox="0 0 24 24" 
+          stroke="currentColor" 
+          stroke-width="2"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <!-- Éditeur JSON (caché par défaut) -->
+      <div *ngIf="showJsonEditor" class="mt-3 space-y-2">
+        <!-- Boutons Copier / Coller -->
+        <div class="flex justify-end gap-2">
+          <button
+            (click)="pasteJson()"
+            class="flex items-center gap-1 px-2 py-1 text-xs text-glass-muted hover:text-glass-secondary rounded hover:bg-white/5 transition-all"
+            title="Coller depuis le presse-papier"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            Coller
+          </button>
+          <button
+            (click)="copyJson()"
+            class="flex items-center gap-1 px-2 py-1 text-xs text-glass-muted hover:text-glass-secondary rounded hover:bg-white/5 transition-all"
+            title="Copier dans le presse-papier"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Copier
+          </button>
+        </div>
+        <textarea
+          [(ngModel)]="jsonEditorContent"
+          (ngModelChange)="onJsonChange()"
+          rows="14"
+          spellcheck="false"
+          class="glass-input w-full px-4 py-3 rounded-lg text-sm font-mono resize-none"
+          [class.border-red-500]="jsonError"
+          placeholder="JSON de l'estimation..."
+        ></textarea>
+        <p *ngIf="jsonError" class="text-xs text-red-400">{{ jsonError }}</p>
+        <p class="text-xs text-glass-muted">
+          Modifiez directement le JSON pour mettre à jour l'estimation.
+        </p>
+      </div>
     </div>
 
     <!-- Bouton Supprimer -->
