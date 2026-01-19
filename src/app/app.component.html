@@ -2,28 +2,44 @@
 
   <!-- Main Content -->
   <main class="w-full flex-1 flex flex-col overflow-hidden">
-    <div class="px-4 sm:px-6 lg:px-8 py-4 flex flex-col flex-1 overflow-hidden">
-      <div class="flex justify-between items-center mb-8 shrink-0">
-        <h1 class="text-3xl font-bold text-glass-primary">🐜 Agile Radar <span class="text-sm font-normal text-glass-muted">v{{ appVersion }}</span></h1>
+    <div class="px-3 sm:px-6 lg:px-8 2xl:px-12 py-4 flex flex-col flex-1 overflow-hidden max-w-[2200px] mx-auto w-full">
+      <div class="flex justify-between items-center mb-4 lg:mb-8 shrink-0">
+        <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-glass-primary">
+          <span class="hidden sm:inline">🐜 Agile Radar</span>
+          <span class="sm:hidden">🐜 Radar</span>
+          <span class="text-xs sm:text-sm font-normal text-glass-muted ml-1">v{{ appVersion }}</span>
+        </h1>
         
-        <!-- Theme Toggle Button -->
-        <!--<button 
-          (click)="toggleTheme()"
-          class="theme-toggle-btn p-2 rounded-full transition-all duration-300"
-          [title]="isDarkMode ? 'Passer en mode clair' : 'Passer en mode sombre'"
-        >
-          <svg *ngIf="isDarkMode" class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
-          </svg>
-          <svg *ngIf="!isDarkMode" class="w-6 h-6 text-indigo-600" fill="currentColor" viewBox="0 0 24 24">
-            <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" clip-rule="evenodd" />
-          </svg>
-        </button>-->
+        <!-- Mobile tabs (visible only when estimation is selected) -->
+        <div class="flex lg:hidden gap-1" *ngIf="selectedEstimation">
+          <button 
+            (click)="mobileTab = 'list'"
+            [class.active-tab]="mobileTab === 'list'"
+            class="mobile-tab px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
+          >
+            Liste
+          </button>
+          <button 
+            (click)="mobileTab = 'chart'"
+            [class.active-tab]="mobileTab === 'chart'"
+            class="mobile-tab px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
+          >
+            Radar
+          </button>
+          <button 
+            (click)="mobileTab = 'form'"
+            [class.active-tab]="mobileTab === 'form'"
+            class="mobile-tab px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
+          >
+            Paramètres
+          </button>
+        </div>
       </div>
 
-      <div class="flex gap-6 flex-1 overflow-hidden">
-        <!-- Colonne 1 : Liste des estimations (largeur fixe) -->
-        <div class="flex flex-col rounded-2xl overflow-hidden w-96 shrink-0">
+      <!-- Desktop Layout (lg+) -->
+      <div class="hidden lg:flex gap-4 xl:gap-6 2xl:gap-10 flex-1 overflow-hidden">
+        <!-- Colonne 1 : Liste des estimations (largeur fixe adaptative) -->
+        <div class="flex flex-col rounded-2xl overflow-hidden w-72 xl:w-80 2xl:w-96 shrink-0">
           <app-estimation-list
             class="flex-1 flex flex-col overflow-hidden"
             [selectedId]="selectedEstimation?.id"
@@ -31,13 +47,13 @@
           ></app-estimation-list>
         </div>
 
-        <!-- Colonne 2 : Radar Chart en live (visible uniquement si une estimation est sélectionnée) -->
-        <div class="flex flex-col rounded-2xl overflow-hidden flex-1" *ngIf="selectedEstimation">
+        <!-- Colonne 2 : Radar Chart en live -->
+        <div class="flex flex-col rounded-2xl overflow-hidden flex-1 min-w-0" *ngIf="selectedEstimation">
           <app-radar-chart [estimation]="selectedEstimation"></app-radar-chart>
         </div>
 
-        <!-- Colonne 3 : Formulaire avec curseurs et nom (visible uniquement si une estimation est sélectionnée) -->
-        <div class="flex flex-col rounded-2xl overflow-hidden flex-1" *ngIf="selectedEstimation">
+        <!-- Colonne 3 : Formulaire avec curseurs et nom -->
+        <div class="flex flex-col rounded-2xl overflow-hidden flex-1 min-w-0" *ngIf="selectedEstimation">
           <app-estimation-form
             [estimation]="selectedEstimation"
             [compact]="true"
@@ -46,12 +62,51 @@
           ></app-estimation-form>
         </div>
       </div>
+
+      <!-- Mobile/Tablet Layout (<lg) -->
+      <div class="flex lg:hidden flex-1 overflow-hidden">
+        <!-- Si aucune estimation sélectionnée, on affiche la liste -->
+        <div class="flex flex-col flex-1 overflow-hidden" *ngIf="!selectedEstimation">
+          <app-estimation-list
+            class="flex-1 flex flex-col overflow-hidden"
+            [selectedId]="undefined"
+            (selectEstimation)="onSelectEstimation($event)"
+          ></app-estimation-list>
+        </div>
+
+        <!-- Si une estimation est sélectionnée, on affiche selon le tab actif -->
+        <ng-container *ngIf="selectedEstimation">
+          <!-- Tab Liste -->
+          <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'list'">
+            <app-estimation-list
+              class="flex-1 flex flex-col overflow-hidden"
+              [selectedId]="selectedEstimation?.id"
+              (selectEstimation)="onSelectEstimation($event)"
+            ></app-estimation-list>
+          </div>
+
+          <!-- Tab Radar Chart -->
+          <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'chart'">
+            <app-radar-chart [estimation]="selectedEstimation"></app-radar-chart>
+          </div>
+
+          <!-- Tab Formulaire -->
+          <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'form'">
+            <app-estimation-form
+              [estimation]="selectedEstimation"
+              [compact]="true"
+              (estimationChanged)="onEstimationChanged($event)"
+              (deleteEstimation)="onDeleteEstimation($event)"
+            ></app-estimation-form>
+          </div>
+        </ng-container>
+      </div>
     </div>
   </main>
 
   <!-- Footer -->
   <footer class="py-2 px-4 text-right text-glass-muted text-xs shrink-0">
     <div>v{{ appVersion }} • <a href="https://github.com/ledukilian/agile-radar" target="_blank" rel="noopener noreferrer" class="hover:text-glass-secondary underline">GitHub</a></div>
-    <div>Made with ❤️ by <a href="https://ledukilian.fr" target="_blank" rel="noopener noreferrer" class="hover:text-glass-secondary underline">Kilian LE DU</a></div>
+    <div class="hidden sm:block">Made with ❤️ by <a href="https://ledukilian.fr" target="_blank" rel="noopener noreferrer" class="hover:text-glass-secondary underline">Kilian LE DU</a></div>
   </footer>
 </div>

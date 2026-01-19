@@ -23,6 +23,7 @@ export class AppComponent implements OnInit {
   selectedEstimation?: Estimation;
   appVersion = environment.version;
   isDarkMode = false;
+  mobileTab: 'list' | 'chart' | 'form' = 'list';
 
   constructor(private estimationService: EstimationService) {}
 
@@ -42,6 +43,10 @@ export class AppComponent implements OnInit {
 
   onSelectEstimation(estimation: Estimation | null): void {
     this.selectedEstimation = estimation || undefined;
+    // Sur mobile, passer au tab chart quand on sélectionne une estimation
+    if (estimation) {
+      this.mobileTab = 'chart';
+    }
   }
 
   onEstimationChanged(estimation: Estimation | null): void {

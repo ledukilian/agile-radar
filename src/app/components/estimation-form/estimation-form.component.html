@@ -1,8 +1,8 @@
 <!-- Version compacte -->
-<div *ngIf="compact" class="glass-card rounded-2xl h-[85vh] flex flex-col overflow-hidden">
-  <div class="p-6 flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-    <div class="flex justify-between items-center mb-6 pb-4 border-b glass-divider shrink-0">
-      <h2 class="text-xl font-bold text-glass-primary">Paramètres</h2>
+<div *ngIf="compact" class="glass-card rounded-2xl h-full lg:h-[85vh] flex flex-col overflow-hidden">
+  <div class="p-4 lg:p-6 flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+    <div class="flex justify-between items-center mb-4 lg:mb-6 pb-3 lg:pb-4 border-b glass-divider shrink-0">
+      <h2 class="text-lg lg:text-xl font-bold text-glass-primary">Paramètres</h2>
       <button
         (click)="onDelete()"
         class="px-3 py-1 text-red-400 hover:text-red-300 text-sm rounded-lg transition-colors"
@@ -12,7 +12,7 @@
       </button>
     </div>
 
-    <div class="space-y-6 flex-1 overflow-x-hidden">
+    <div class="space-y-4 lg:space-y-6 flex-1 overflow-x-hidden">
     <!-- Nom -->
     <div>
       <label class="block text-sm font-semibold text-glass-secondary mb-2">
@@ -23,19 +23,19 @@
         [(ngModel)]="formData.name"
         (ngModelChange)="onFieldChange()"
         placeholder="Ex: Authentification utilisateur"
-        class="glass-input w-full px-4 py-2.5 rounded-lg text-sm"
+        class="glass-input w-full px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg text-sm"
       />
     </div>
 
     <!-- CURSE Sliders compacts -->
-    <div class="space-y-6">
+    <div class="space-y-4 lg:space-y-6">
       <!-- Complexity -->
-      <div class="px-4 pb-4">
+      <div class="px-2 lg:px-4 pb-3 lg:pb-4">
         <div class="mb-2">
           <label class="text-sm font-semibold text-glass-primary">
             <span class="font-bold text-yellow-500 text-base">C</span> - Complexité
           </label>
-          <p class="text-xs text-glass-muted mt-0.5">Difficulté technique ou fonctionnelle</p>
+          <p class="text-xs text-glass-muted mt-0.5 hidden sm:block">Difficulté technique ou fonctionnelle</p>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -64,12 +64,12 @@
       </div>
 
       <!-- Uncertainty -->
-      <div class="px-4 pb-4">
+      <div class="px-2 lg:px-4 pb-3 lg:pb-4">
         <div class="mb-2">
           <label class="text-sm font-semibold text-glass-primary">
             <span class="font-bold text-purple-500 text-base">U</span> - Incertitude
           </label>
-          <p class="text-xs text-glass-muted mt-0.5">Zones floues, manque d'informations</p>
+          <p class="text-xs text-glass-muted mt-0.5 hidden sm:block">Zones floues, manque d'informations</p>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -98,12 +98,12 @@
       </div>
 
       <!-- Risk -->
-      <div class="px-4 pb-4">
+      <div class="px-2 lg:px-4 pb-3 lg:pb-4">
         <div class="mb-2">
           <label class="text-sm font-semibold text-glass-primary">
             <span class="font-bold text-red-500 text-base">R</span> - Risque
           </label>
-          <p class="text-xs text-glass-muted mt-0.5">Dépendances, impacts, dangers potentiels</p>
+          <p class="text-xs text-glass-muted mt-0.5 hidden sm:block">Dépendances, impacts, dangers potentiels</p>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -132,12 +132,12 @@
       </div>
 
       <!-- Size -->
-      <div class="px-4 pb-4">
+      <div class="px-2 lg:px-4 pb-3 lg:pb-4">
         <div class="mb-2">
           <label class="text-sm font-semibold text-glass-primary">
             <span class="font-bold text-green-500 text-base">S</span> - Taille
           </label>
-          <p class="text-xs text-glass-muted mt-0.5">Ampleur globale du travail</p>
+          <p class="text-xs text-glass-muted mt-0.5 hidden sm:block">Ampleur globale du travail</p>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->
@@ -166,12 +166,12 @@
       </div>
 
       <!-- Effort -->
-      <div class="px-4">
+      <div class="px-2 lg:px-4">
         <div class="mb-2">
           <label class="text-sm font-semibold text-glass-primary">
             <span class="font-bold text-blue-500 text-base">E</span> - Effort
           </label>
-          <p class="text-xs text-glass-muted mt-0.5">Charge de travail estimée</p>
+          <p class="text-xs text-glass-muted mt-0.5 hidden sm:block">Charge de travail estimée</p>
         </div>
         <div class="slider-container">
           <!-- Track de fond -->

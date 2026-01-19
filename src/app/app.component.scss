@@ -1,1 +1,18 @@
-// Styles spécifiques si nécessaire
+// Mobile tabs styling
+.mobile-tab {
+  background: var(--inner-bg);
+  border: 1px solid var(--inner-border);
+  color: var(--text-secondary);
+  
+  &:hover {
+    background: var(--list-hover-bg);
+    border-color: var(--list-hover-border);
+  }
+  
+  &.active-tab {
+    background: var(--list-selected-bg);
+    border-color: var(--list-selected-border);
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+}
