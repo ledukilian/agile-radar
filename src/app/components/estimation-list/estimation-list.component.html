@@ -10,8 +10,8 @@
         Ajouter
       </button>
     </div>
-    <!-- Barre de recherche -->
-    <div *ngIf="estimations.length > 0" class="mt-4">
+    <!-- Barre de recherche et filtre -->
+    <div *ngIf="estimations.length > 0" class="mt-4 space-y-2">
       <div class="relative">
         <svg class="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-glass-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -33,6 +33,15 @@
           </svg>
         </button>
       </div>
+      <!-- Filtre par type -->
+      <!--<select
+        [(ngModel)]="typeFilter"
+        class="w-full py-1 px-2 text-xs glass-input rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500/50 cursor-pointer"
+      >
+        <option value="">Tous les types</option>
+        <option value="user-story">🧩 User Story</option>
+        <option value="feature">⭐ Feature</option>
+      </select>-->
     </div>
   </div>
 
@@ -53,32 +62,96 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
     </div>
-    <p class="text-glass-secondary font-medium text-sm">Aucun résultat pour « <span class="text-glass-primary">{{ searchQuery }}</span> »</p>
-    <p class="text-glass-muted text-xs">Essayez avec d'autres termes</p>
+    <p class="text-glass-secondary font-medium text-sm">Aucun résultat</p>
+    <p class="text-glass-muted text-xs">Essayez avec d'autres critères de recherche</p>
   </div>
 
-  <div *ngIf="filteredEstimations.length > 0" class="space-y-2 flex-1 overflow-y-auto">
+  <div *ngIf="hasGroupedItems" class="space-y-2 flex-1 overflow-y-auto">
+    <!-- Features avec leurs US enfants -->
+    <ng-container *ngFor="let feature of features">
+      <!-- Feature (parent) -->
+      <div class="space-y-0.5">
+        <div
+          (click)="onSelect(feature)"
+          [class.selected]="selectedId === feature.id"
+          class="glass-list-item rounded-lg px-1 py-1.5 cursor-pointer flex items-center gap-2"
+        >
+          <!-- Chevron pour expand/collapse -->
+          <button 
+            *ngIf="getChildUserStories(feature.id).length > 0"
+            (click)="toggleFeatureExpand(feature.id); $event.stopPropagation()"
+            class="w-4 h-4 flex items-center justify-center text-glass-muted hover:text-glass-secondary transition-colors shrink-0"
+          >
+            <svg 
+              class="w-3 h-3 transition-transform duration-200" 
+              [class.rotate-90]="isFeatureExpanded(feature.id)"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+          <span *ngIf="getChildUserStories(feature.id).length === 0" class="w-4 shrink-0"></span>
+          
+          <span>⭐</span>
+          <div class="flex-1 min-w-0">
+            <h4 class="font-medium text-glass-primary text-sm truncate">{{ feature.name }}</h4>
+            <p class="text-[10px] text-glass-muted truncate">
+              {{ formatDate(feature.updatedAt) }}
+              <span *ngIf="getChildUserStories(feature.id).length > 0" class="ml-1">
+                · {{ getChildUserStories(feature.id).length }} US
+              </span>
+            </p>
+          </div>
+          <span 
+            class="px-1.5 py-0.5 text-xs font-medium rounded shrink-0"
+            [ngClass]="[getTShirtSize(feature).bgColor, getTShirtSize(feature).textColor]"
+          >
+            {{ getFeatureTotalPoints(feature) }} pts
+          </span>
+        </div>
+
+        <!-- User Stories enfants (quand la feature est dépliée) -->
+        <div *ngIf="isFeatureExpanded(feature.id)" class="ml-4 pl-2 border-l-2 border-glass-muted/30 space-y-0.5">
+          <div
+            *ngFor="let userStory of getChildUserStories(feature.id)"
+            (click)="onSelect(userStory)"
+            [class.selected]="selectedId === userStory.id"
+            class="glass-list-item rounded-lg px-2 py-1.5 cursor-pointer flex items-center gap-2"
+          >
+            <span>🧩</span>
+            <div class="flex-1 min-w-0">
+              <h4 class="font-medium text-glass-primary text-sm truncate">{{ userStory.name }}</h4>
+              <p class="text-[10px] text-glass-muted truncate">{{ formatDate(userStory.updatedAt) }}</p>
+            </div>
+            <span class="text-[11px] shrink-0" [ngClass]="getTShirtSize(userStory).textColor">
+              {{ getComplexityPointsCeil(userStory) }} pts
+            </span>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Séparateur si on a des features ET des US orphelines -->
+    <div *ngIf="features.length > 0 && orphanUserStories.length > 0" class="py-2">
+      <div class="border-t glass-divider"></div>
+      <p class="text-[10px] text-glass-muted text-center mt-2">User Stories non rattachées</p>
+    </div>
+
+    <!-- User Stories orphelines -->
     <div
-      *ngFor="let estimation of filteredEstimations"
-      (click)="onSelect(estimation)"
-      [class.selected]="selectedId === estimation.id"
+      *ngFor="let userStory of orphanUserStories"
+      (click)="onSelect(userStory)"
+      [class.selected]="selectedId === userStory.id"
       class="glass-list-item rounded-lg px-2 py-1.5 cursor-pointer flex items-center gap-2"
     >
-      <span 
-        class="w-10 px-1.5 py-0.5 text-xs font-bold rounded shrink-0 inline-flex items-center justify-center"
-        [ngClass]="[getTShirtSize(estimation).bgColor, getTShirtSize(estimation).textColor]"
-      >
-        {{ getTShirtSize(estimation).size }}
-      </span>
+      <span class="w-4 shrink-0"></span>
+      <span>🧩</span>
       <div class="flex-1 min-w-0">
-        <h4 class="font-medium text-glass-primary text-sm truncate">{{ estimation.name }}</h4>
-        <p class="text-[10px] text-glass-muted truncate">{{ formatDate(estimation.updatedAt) }}</p>
+        <h4 class="font-medium text-glass-primary text-sm truncate">{{ userStory.name }}</h4>
+        <p class="text-[10px] text-glass-muted truncate">{{ formatDate(userStory.updatedAt) }}</p>
       </div>
-      <span 
-        class="px-1.5 py-0.5 text-xs font-medium rounded shrink-0"
-        [ngClass]="[getTShirtSize(estimation).bgColor, getTShirtSize(estimation).textColor]"
-      >
-        {{ getComplexityPointsCeil(estimation) }} pts
+      <span class="text-[11px] shrink-0" [ngClass]="getTShirtSize(userStory).textColor">
+        {{ getComplexityPointsCeil(userStory) }} pts
       </span>
     </div>
   </div>
@@ -105,7 +178,7 @@
         Importer des données
       </button>
     </div>
-    <div class="flex justify-center gap-3 mt-2">
+    <div class="flex justify-center gap-3 mt-1">
       <button 
         (click)="onDeleteAll()" 
         class="text-xs font-semibold text-red-400 hover:text-red-300 hover:underline transition-colors"

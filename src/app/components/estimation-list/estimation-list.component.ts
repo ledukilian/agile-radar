@@ -19,19 +19,147 @@ export class EstimationListComponent implements OnInit {
 
   estimations: Estimation[] = [];
   searchQuery: string = '';
+  typeFilter: string = '';
 
   /**
-   * Retourne les estimations filtrées par la recherche
+   * Vérifie si une estimation correspond à la recherche
+   */
+  private matchesSearch(estimation: Estimation): boolean {
+    if (!this.searchQuery.trim()) return true;
+    const query = this.searchQuery.toLowerCase().trim();
+    return estimation.name.toLowerCase().includes(query) ||
+           (estimation.description?.toLowerCase().includes(query) ?? false);
+  }
+
+  /**
+   * Retourne les estimations filtrées par la recherche et le type
    */
   get filteredEstimations(): Estimation[] {
-    if (!this.searchQuery.trim()) {
-      return this.estimations;
+    let result = this.estimations;
+
+    // Filtrer par type
+    if (this.typeFilter) {
+      result = result.filter(estimation => estimation.type === this.typeFilter);
     }
-    const query = this.searchQuery.toLowerCase().trim();
-    return this.estimations.filter(estimation =>
-      estimation.name.toLowerCase().includes(query) ||
-      estimation.description?.toLowerCase().includes(query)
+
+    // Filtrer par recherche textuelle
+    if (this.searchQuery.trim()) {
+      const query = this.searchQuery.toLowerCase().trim();
+      result = result.filter(estimation =>
+        estimation.name.toLowerCase().includes(query) ||
+        estimation.description?.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
+  }
+
+  /**
+   * Retourne les features à afficher :
+   * - Features qui correspondent à la recherche
+   * - OU features dont au moins une US enfant correspond à la recherche
+   */
+  get features(): Estimation[] {
+    const allFeatures = this.estimations.filter(e => e.type === 'feature');
+    
+    // Si pas de recherche, retourner toutes les features (filtrées par type si applicable)
+    if (!this.searchQuery.trim()) {
+      if (this.typeFilter) {
+        return allFeatures.filter(f => f.type === this.typeFilter);
+      }
+      return allFeatures;
+    }
+
+    // Avec recherche : afficher la feature si elle match OU si une de ses US match
+    return allFeatures.filter(feature => {
+      // La feature elle-même correspond
+      if (this.matchesSearch(feature)) return true;
+      
+      // Au moins une US enfant correspond
+      const childUserStories = this.estimations.filter(e => 
+        e.type === 'user-story' && e.parentFeatureId === feature.id
+      );
+      return childUserStories.some(us => this.matchesSearch(us));
+    });
+  }
+
+  /**
+   * Retourne les user stories enfants d'une feature donnée (filtrées par la recherche)
+   */
+  getChildUserStories(featureId: string): Estimation[] {
+    const allChildren = this.estimations.filter(e => 
+      e.type === 'user-story' && e.parentFeatureId === featureId
     );
+    
+    // Si pas de recherche, retourner toutes les US enfants
+    if (!this.searchQuery.trim()) {
+      return allChildren;
+    }
+    
+    // Avec recherche, ne retourner que les US qui correspondent
+    return allChildren.filter(us => this.matchesSearch(us));
+  }
+
+  /**
+   * Retourne les user stories orphelines (sans parent feature, filtrées)
+   */
+  get orphanUserStories(): Estimation[] {
+    const featureIds = this.estimations
+      .filter(e => e.type === 'feature')
+      .map(e => e.id);
+    
+    return this.filteredEstimations.filter(e => 
+      e.type === 'user-story' && (!e.parentFeatureId || !featureIds.includes(e.parentFeatureId))
+    );
+  }
+
+  /**
+   * Retourne TOUTES les user stories enfants d'une feature (sans filtre de recherche)
+   * Utilisé pour le calcul des points totaux
+   */
+  getAllChildUserStories(featureId: string): Estimation[] {
+    return this.estimations.filter(e => 
+      e.type === 'user-story' && e.parentFeatureId === featureId
+    );
+  }
+
+  /**
+   * Calcule le total des points pour une feature selon son mode de calcul
+   */
+  getFeatureTotalPoints(feature: Estimation): number {
+    const mode = feature.complexityMode || 'feature-only';
+    
+    if (mode === 'sum-us') {
+      // Somme des US uniquement (toutes les US, pas seulement celles filtrées)
+      // On arrondit au ceil chaque US avant de sommer pour être cohérent avec l'affichage
+      return this.getAllChildUserStories(feature.id)
+        .reduce((sum, us) => sum + this.getComplexityPointsCeil(us), 0);
+    } else {
+      // Uniquement la feature
+      return Math.ceil(this.calculateComplexityPoints(feature));
+    }
+  }
+
+  /**
+   * Vérifie si la liste groupée a des éléments à afficher
+   */
+  get hasGroupedItems(): boolean {
+    return this.features.length > 0 || this.orphanUserStories.length > 0;
+  }
+
+  // État d'expansion des features
+  expandedFeatures: Set<string> = new Set();
+
+  toggleFeatureExpand(featureId: string): void {
+    if (this.expandedFeatures.has(featureId)) {
+      this.expandedFeatures.delete(featureId);
+    } else {
+      this.expandedFeatures.add(featureId);
+    }
+  }
+
+  isFeatureExpanded(featureId: string): boolean {
+    return this.expandedFeatures.has(featureId);
   }
 
   // T-shirt sizes avec leurs ranges de points de complexité (progression Fibonacci)

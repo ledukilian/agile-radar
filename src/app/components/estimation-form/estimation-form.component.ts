@@ -20,7 +20,7 @@ export class EstimationFormComponent implements OnInit, OnChanges {
   @Output() closeForm = new EventEmitter<void>();
 
   // Onglet actif
-  activeTab: 'base' | 'curseurs' | 'conseils' = 'base';
+  activeTab: 'base' | 'curseurs' | 'conseils' | 'json' = 'base';
   
   // Recommandations calculées (stockées pour éviter les recalculs dans le template)
   recommendations: Recommendation[] = [];
@@ -29,11 +29,12 @@ export class EstimationFormComponent implements OnInit, OnChanges {
   showJsonEditor: boolean = false;
   jsonEditorContent: string = '';
   jsonError: string | null = null;
+  jsonCopied: boolean = false;
 
   // Limites de caractères pour les champs
   readonly charLimits = {
     name: 80,
-    description: 200,
+    description: 250,
     author: 50
   };
 
@@ -98,6 +99,8 @@ export class EstimationFormComponent implements OnInit, OnChanges {
     date: string;
     author: string;
     type: 'user-story' | 'feature';
+    parentFeatureId: string;
+    complexityMode: 'feature-only' | 'sum-us';
     complexity: number; // Valeur continue 0-100
     uncertainty: number;
     risk: number;
@@ -109,12 +112,17 @@ export class EstimationFormComponent implements OnInit, OnChanges {
     date: new Date().toISOString().split('T')[0],
     author: '',
     type: 'user-story',
+    parentFeatureId: '',
+    complexityMode: 'feature-only',
     complexity: 50,
     uncertainty: 50,
     risk: 50,
     size: 50,
     effort: 50
   };
+
+  // Liste des features disponibles pour lier une user story
+  availableFeatures: Estimation[] = [];
 
   constructor(
     private settingsService: SettingsService,
@@ -123,6 +131,7 @@ export class EstimationFormComponent implements OnInit, OnChanges {
 
   ngOnInit(): void {
     this.loadTailles();
+    this.loadAvailableFeatures();
     this.initializeForm();
     this.updateRecommendations();
     // Émettre immédiatement une estimation temporaire pour l'affichage live
@@ -130,6 +139,24 @@ export class EstimationFormComponent implements OnInit, OnChanges {
     setTimeout(() => {
       this.emitTemporaryEstimation();
     }, 0);
+  }
+
+  private loadAvailableFeatures(): void {
+    this.availableFeatures = this.estimationService.getFeatures();
+    // S'abonner aux changements pour mettre à jour la liste
+    this.estimationService.estimations$.subscribe(() => {
+      this.availableFeatures = this.estimationService.getFeatures();
+    });
+  }
+
+  /**
+   * Retourne les user stories enfants de la feature courante
+   */
+  getChildUserStories(): Estimation[] {
+    if (!this.estimation || this.formData.type !== 'feature') {
+      return [];
+    }
+    return this.estimationService.getUserStoriesForFeature(this.estimation.id);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -172,6 +199,8 @@ export class EstimationFormComponent implements OnInit, OnChanges {
         date: defaultDate,
         author: this.estimation.author || defaultAuthor,
         type: this.estimation.type || 'user-story',
+        parentFeatureId: this.estimation.parentFeatureId || '',
+        complexityMode: this.estimation.complexityMode || 'feature-only',
         complexity: this.estimation.complexity,
         uncertainty: this.estimation.uncertainty,
         risk: this.estimation.risk,
@@ -186,6 +215,8 @@ export class EstimationFormComponent implements OnInit, OnChanges {
         date: new Date().toISOString().split('T')[0],
         author: defaultAuthor,
         type: 'user-story',
+        parentFeatureId: '',
+        complexityMode: 'feature-only',
         complexity: 0,
         uncertainty: 0,
         risk: 0,
@@ -255,8 +286,24 @@ export class EstimationFormComponent implements OnInit, OnChanges {
     return this.graduations[axis] || [];
   }
 
-  setActiveTab(tab: 'base' | 'curseurs' | 'conseils'): void {
+  /**
+   * Vérifie si l'onglet Évaluation doit être désactivé
+   * (quand une feature est en mode "Somme des US")
+   */
+  get isEvaluationTabDisabled(): boolean {
+    return this.formData.type === 'feature' && this.formData.complexityMode === 'sum-us';
+  }
+
+  setActiveTab(tab: 'base' | 'curseurs' | 'conseils' | 'json'): void {
+    // Empêcher l'accès à l'onglet curseurs si désactivé
+    if (tab === 'curseurs' && this.isEvaluationTabDisabled) {
+      return;
+    }
     this.activeTab = tab;
+    // Si on ouvre l'onglet JSON, s'assurer que le contenu est à jour
+    if (tab === 'json') {
+      this.updateJsonEditorContent();
+    }
   }
 
   onFieldChange(): void {
@@ -267,6 +314,11 @@ export class EstimationFormComponent implements OnInit, OnChanges {
     this.formData.risk = +this.formData.risk;
     this.formData.size = +this.formData.size;
     this.formData.effort = +this.formData.effort;
+
+    // Si on passe en mode "sum-us" et qu'on est sur l'onglet curseurs, basculer vers l'onglet base
+    if (this.isEvaluationTabDisabled && this.activeTab === 'curseurs') {
+      this.activeTab = 'base';
+    }
 
     // Mettre à jour les recommandations
     this.updateRecommendations();
@@ -304,6 +356,8 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       date: this.formData.date,
       author: this.formData.author,
       type: this.formData.type,
+      parentFeatureId: this.formData.parentFeatureId || undefined,
+      complexityMode: this.formData.type === 'feature' ? this.formData.complexityMode : undefined,
       complexity: this.formData.complexity,
       uncertainty: this.formData.uncertainty,
       risk: this.formData.risk,
@@ -333,6 +387,8 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       date: this.formData.date,
       author: this.formData.author,
       type: this.formData.type,
+      parentFeatureId: this.formData.parentFeatureId || undefined,
+      complexityMode: this.formData.type === 'feature' ? this.formData.complexityMode : undefined,
       complexity: this.formData.complexity,
       uncertainty: this.formData.uncertainty,
       risk: this.formData.risk,
@@ -359,6 +415,8 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       date: new Date().toISOString().split('T')[0],
       author: this.getDefaultAuthor(),
       type: 'user-story',
+      parentFeatureId: '',
+      complexityMode: 'feature-only',
       complexity: 0,
       uncertainty: 0,
       risk: 0,
@@ -389,6 +447,21 @@ export class EstimationFormComponent implements OnInit, OnChanges {
    */
   calculateComplexityPoints(): number {
     const curseAverage = this.getCurseAverage();
+    return this.calculatePointsFromAverage(curseAverage);
+  }
+
+  /**
+   * Calcule les points de complexité pour une estimation donnée
+   */
+  calculatePointsForEstimation(estimation: Estimation): number {
+    const avg = (estimation.complexity + estimation.uncertainty + estimation.risk + estimation.size + estimation.effort) / 5;
+    return this.calculatePointsFromAverage(avg);
+  }
+
+  /**
+   * Calcule les points à partir d'une moyenne CURSE
+   */
+  private calculatePointsFromAverage(curseAverage: number): number {
     // Normaliser entre 0 et 1
     const normalized = curseAverage / 100;
     // Formule exponentielle: 377^x donne une progression naturelle vers Fibonacci
@@ -446,6 +519,7 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       date: this.formData.date,
       author: this.formData.author,
       type: this.formData.type,
+      parentFeatureId: this.formData.parentFeatureId || undefined,
       complexity: this.formData.complexity,
       uncertainty: this.formData.uncertainty,
       risk: this.formData.risk,
@@ -471,7 +545,7 @@ export class EstimationFormComponent implements OnInit, OnChanges {
    * Met à jour le contenu JSON à partir des données du formulaire
    */
   private updateJsonEditorContent(): void {
-    const jsonData = {
+    const jsonData: Record<string, any> = {
       name: this.formData.name,
       description: this.formData.description,
       date: this.formData.date,
@@ -483,6 +557,14 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       size: this.formData.size,
       effort: this.formData.effort
     };
+    // Ajouter parentFeatureId seulement pour les user stories
+    if (this.formData.type === 'user-story' && this.formData.parentFeatureId) {
+      jsonData['parentFeatureId'] = this.formData.parentFeatureId;
+    }
+    // Ajouter complexityMode seulement pour les features
+    if (this.formData.type === 'feature') {
+      jsonData['complexityMode'] = this.formData.complexityMode;
+    }
     this.jsonEditorContent = JSON.stringify(jsonData, null, 2);
     this.jsonError = null;
   }
@@ -510,6 +592,12 @@ export class EstimationFormComponent implements OnInit, OnChanges {
       }
       if (parsed.type === 'user-story' || parsed.type === 'feature') {
         this.formData.type = parsed.type;
+      }
+      if (typeof parsed.parentFeatureId === 'string') {
+        this.formData.parentFeatureId = parsed.parentFeatureId;
+      }
+      if (parsed.complexityMode === 'feature-only' || parsed.complexityMode === 'sum-us') {
+        this.formData.complexityMode = parsed.complexityMode;
       }
       
       // Valider les valeurs numériques (0-100)
@@ -544,6 +632,10 @@ export class EstimationFormComponent implements OnInit, OnChanges {
   async copyJson(): Promise<void> {
     try {
       await navigator.clipboard.writeText(this.jsonEditorContent);
+      this.jsonCopied = true;
+      setTimeout(() => {
+        this.jsonCopied = false;
+      }, 2000);
     } catch (e) {
       // Fallback pour les navigateurs qui ne supportent pas l'API clipboard
       console.error('Impossible de copier dans le presse-papier', e);

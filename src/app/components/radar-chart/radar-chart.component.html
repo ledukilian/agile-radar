@@ -7,13 +7,33 @@
       >
         {{ getTShirtSize().size }}
       </span>
-      <h2 class="text-base lg:text-xl font-bold text-glass-primary truncate flex-1 min-w-0">{{ estimation.name }}</h2>
+      <h2 class="text-base lg:text-lg font-bold text-glass-primary truncate flex-1 min-w-0">{{ estimation.name }}</h2>
       <span 
         class="text-xs lg:text-sm font-medium py-0.5 lg:py-1 px-2 rounded shrink-0"
         [ngClass]="[getTShirtSize().bgColor, getTShirtSize().textColor]"
-      >{{ getComplexityPointsCeil() }} pts</span>
+      >{{ getFinalComplexityPoints() }} pts</span>
     </div>
-    <p *ngIf="estimation.description" class="mt-2 text-[11px] lg:text-xs text-glass-muted">{{ estimation.description }}</p>
+    <p class="mt-1 text-[11px] lg:text-xs text-glass-secondary">
+      {{ estimation.type === 'feature' ? '⭐ Feature' : '🧩 User Story' }}
+    </p>
+    <p *ngIf="estimation.description" class="mt-1 text-[11px] lg:text-xs text-glass-muted">{{ estimation.description }}</p>
+    <p *ngIf="estimation.type === 'user-story' && getParentFeature()" class="mt-1 text-[11px] lg:text-xs text-glass-secondary">
+      ⭐ Feature : {{ getParentFeature()?.name }}
+    </p>
+    <!-- Liste des User Stories rattachées (uniquement pour les features) -->
+    <div *ngIf="estimation.type === 'feature' && getChildUserStories().length > 0" class="pt-1 border-t border-white/10">
+      <div class="space-y-0.5">
+        <div *ngFor="let us of getChildUserStories()" class="flex justify-between text-[11px] lg:text-xs text-glass-secondary">
+          <span>🧩 {{ us.name }}</span>
+          <span class="text-glass-muted tabular-nums">{{ calculatePointsForEstimation(us) }} pts</span>
+        </div>
+      </div>
+      <!-- Total mode ticket de caisse -->
+      <div class="flex justify-between mt-1 pt-1 border-t border-dashed border-white/20 text-[11px] lg:text-xs font-semibold text-glass-primary">
+        <span>Total US</span>
+        <span class="tabular-nums">{{ getChildUserStoriesTotal() }} pts</span>
+      </div>
+    </div>
   </div>
 
   <!-- Détail des 5 dimensions CURSE - Compact -->
@@ -124,9 +144,13 @@
     </div>
   </div>
 
-  <div class="relative flex items-center justify-center -my-10" style="max-height: 400px;">
+  <div class="relative flex items-center justify-center -my-10" [style.max-height]="estimation?.type === 'feature' ? '320px' : '400px'">
     <canvas #chartCanvas></canvas>
   </div>
+  <!-- Message indicatif pour le mode "Somme des US" -->
+  <p *ngIf="isFeatureSumUsMode() && getChildUserStories().length > 0" class="text-[10px] lg:text-[11px] text-glass-muted text-center mt-2">
+    💡 Le radar reflète les niveaux de complexité les plus élevés identifiés dans les User Stories.
+  </p>
   <!-- Auteur sous le graphique -->
   <p *ngIf="estimation?.author" class="text-[11px] lg:text-xs text-glass-muted text-right mt-2">
     <span class="opacity-70">Estimation par</span> {{ estimation?.author }}

@@ -177,18 +177,20 @@ export class RadarChartComponent implements OnInit, OnChanges {
     // Obtenir la couleur basée sur la T-shirt size
     const tShirt = this.getTShirtSize();
 
-    // Utiliser directement les valeurs numériques (système analogique)
+    // Utiliser les valeurs effectives (max des US en mode sum-us)
+    const values = this.getEffectiveValues();
+
     return {
       labels: ['Complexité', 'Incertitude', 'Risque', 'Taille', 'Effort'],
       datasets: [
         {
           label: this.estimation.name,
           data: [
-            this.estimation.complexity,
-            this.estimation.uncertainty,
-            this.estimation.risk,
-            this.estimation.size,
-            this.estimation.effort
+            values.complexity,
+            values.uncertainty,
+            values.risk,
+            values.size,
+            values.effort
           ],
           backgroundColor: tShirt.fillColor,
           borderColor: tShirt.borderColor,
@@ -234,17 +236,19 @@ export class RadarChartComponent implements OnInit, OnChanges {
 
   /**
    * Calcule la moyenne CURSE (0-100) à partir des 5 axes de l'estimation
+   * Utilise les valeurs effectives (max des US en mode sum-us)
    */
   getCurseAverage(): number {
     if (!this.estimation) return 0;
     
-    // Utiliser directement les valeurs numériques
+    // Utiliser les valeurs effectives
+    const values = this.getEffectiveValues();
     return (
-      this.estimation.complexity +
-      this.estimation.uncertainty +
-      this.estimation.risk +
-      this.estimation.size +
-      this.estimation.effort
+      values.complexity +
+      values.uncertainty +
+      values.risk +
+      values.size +
+      values.effort
     ) / 5;
   }
 
@@ -266,6 +270,23 @@ export class RadarChartComponent implements OnInit, OnChanges {
   }
 
   /**
+   * Retourne les points de complexité finaux en tenant compte du mode de calcul
+   * Pour les features en mode "sum-us", retourne la somme des US
+   * Sinon, retourne les points calculés à partir de l'évaluation CURSE
+   */
+  getFinalComplexityPoints(): number {
+    if (!this.estimation) return 0;
+    
+    // Si c'est une feature en mode "somme des US"
+    if (this.estimation.type === 'feature' && this.estimation.complexityMode === 'sum-us') {
+      return this.getChildUserStoriesTotal();
+    }
+    
+    // Sinon, utiliser le calcul basé sur l'évaluation CURSE
+    return this.getComplexityPointsCeil();
+  }
+
+  /**
    * Détermine la T-shirt size en fonction des points de complexité
    */
   getTShirtSize(): { size: string; min: number; max: number; bgColor: string; textColor: string; fillColor: string; borderColor: string } {
@@ -281,19 +302,24 @@ export class RadarChartComponent implements OnInit, OnChanges {
 
   /**
    * Retourne la valeur numérique (0-100) pour une dimension CURSE donnée
+   * Utilise les valeurs effectives (max des US en mode sum-us)
    */
   getValueForDimension(dimension: 'complexity' | 'uncertainty' | 'risk' | 'size' | 'effort'): number {
     if (!this.estimation) return 0;
-    // Utiliser directement la valeur numérique
-    return this.estimation[dimension];
+    // Utiliser les valeurs effectives
+    const values = this.getEffectiveValues();
+    return values[dimension];
   }
 
   /**
    * Retourne l'index de graduation le plus proche pour une dimension (pour afficher les niveaux)
+   * Utilise les valeurs effectives (max des US en mode sum-us)
    */
   getGraduationIndex(dimension: 'complexity' | 'uncertainty' | 'risk' | 'size' | 'effort'): number {
     if (!this.estimation) return 0;
-    const value = this.estimation[dimension];
+    // Utiliser les valeurs effectives
+    const values = this.getEffectiveValues();
+    const value = values[dimension];
     const grads = this.graduations[dimension];
     // Trouver la graduation la plus proche
     let closestIndex = 0;
@@ -324,10 +350,13 @@ export class RadarChartComponent implements OnInit, OnChanges {
 
   /**
    * Retourne le label de la graduation la plus proche pour une dimension donnée
+   * Utilise les valeurs effectives (max des US en mode sum-us)
    */
   getClosestGraduationLabel(dimension: 'complexity' | 'uncertainty' | 'risk' | 'size' | 'effort'): string {
     if (!this.estimation) return '';
-    const value = this.estimation[dimension];
+    // Utiliser les valeurs effectives
+    const values = this.getEffectiveValues();
+    const value = values[dimension];
     const grads = this.graduations[dimension];
     // Trouver la graduation la plus proche
     let closest = grads[0];
@@ -402,6 +431,96 @@ export class RadarChartComponent implements OnInit, OnChanges {
    */
   get recommendations(): Recommendation[] {
     return this.estimationService.getRecommendations(this.estimation);
+  }
+
+  /**
+   * Retourne la feature parente d'une user story (si elle existe)
+   */
+  getParentFeature(): Estimation | undefined {
+    if (!this.estimation || this.estimation.type !== 'user-story' || !this.estimation.parentFeatureId) {
+      return undefined;
+    }
+    return this.estimationService.getEstimation(this.estimation.parentFeatureId);
+  }
+
+  /**
+   * Retourne les user stories rattachées à la feature courante
+   */
+  getChildUserStories(): Estimation[] {
+    if (!this.estimation || this.estimation.type !== 'feature') {
+      return [];
+    }
+    return this.estimationService.getUserStoriesForFeature(this.estimation.id);
+  }
+
+  /**
+   * Vérifie si l'estimation est une feature en mode "Somme des US"
+   */
+  isFeatureSumUsMode(): boolean {
+    return !!(this.estimation && 
+              this.estimation.type === 'feature' && 
+              this.estimation.complexityMode === 'sum-us');
+  }
+
+  /**
+   * Calcule les valeurs CURSE maximales parmi les US enfants
+   * Utilisé quand une feature est en mode "Somme des US"
+   * Logique: une seule US risquée/incertaine/complexe rend la feature risquée/incertaine/complexe
+   */
+  getMaxValuesFromUserStories(): { complexity: number; uncertainty: number; risk: number; size: number; effort: number } {
+    const userStories = this.getChildUserStories();
+    
+    if (userStories.length === 0) {
+      return { complexity: 0, uncertainty: 0, risk: 0, size: 0, effort: 0 };
+    }
+
+    return {
+      complexity: Math.max(...userStories.map(us => us.complexity)),
+      uncertainty: Math.max(...userStories.map(us => us.uncertainty)),
+      risk: Math.max(...userStories.map(us => us.risk)),
+      size: Math.max(...userStories.map(us => us.size)),
+      effort: Math.max(...userStories.map(us => us.effort))
+    };
+  }
+
+  /**
+   * Retourne les valeurs CURSE effectives à afficher
+   * - En mode "Somme des US": prend le MAX de chaque dimension parmi les US
+   * - Sinon: utilise les valeurs directes de l'estimation
+   */
+  getEffectiveValues(): { complexity: number; uncertainty: number; risk: number; size: number; effort: number } {
+    if (!this.estimation) {
+      return { complexity: 0, uncertainty: 0, risk: 0, size: 0, effort: 0 };
+    }
+
+    if (this.isFeatureSumUsMode()) {
+      return this.getMaxValuesFromUserStories();
+    }
+
+    return {
+      complexity: this.estimation.complexity,
+      uncertainty: this.estimation.uncertainty,
+      risk: this.estimation.risk,
+      size: this.estimation.size,
+      effort: this.estimation.effort
+    };
+  }
+
+  /**
+   * Calcule les points de complexité pour une estimation donnée
+   */
+  calculatePointsForEstimation(estimation: Estimation): number {
+    const avg = (estimation.complexity + estimation.uncertainty + estimation.risk + estimation.size + estimation.effort) / 5;
+    const normalized = avg / 100;
+    const points = Math.pow(377, normalized);
+    return Math.ceil(points);
+  }
+
+  /**
+   * Retourne le total des points de complexité des US enfants
+   */
+  getChildUserStoriesTotal(): number {
+    return this.getChildUserStories().reduce((sum, us) => sum + this.calculatePointsForEstimation(us), 0);
   }
 
   /**

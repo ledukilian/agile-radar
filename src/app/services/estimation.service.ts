@@ -57,6 +57,22 @@ export class EstimationService {
     return this.estimationsSubject.value;
   }
 
+  /**
+   * Retourne toutes les estimations de type "feature"
+   */
+  getFeatures(): Estimation[] {
+    return this.estimationsSubject.value.filter(e => e.type === 'feature');
+  }
+
+  /**
+   * Retourne les user stories rattachées à une feature donnée
+   */
+  getUserStoriesForFeature(featureId: string): Estimation[] {
+    return this.estimationsSubject.value.filter(e => 
+      e.type === 'user-story' && e.parentFeatureId === featureId
+    );
+  }
+
   getEstimation(id: string): Estimation | undefined {
     return this.estimationsSubject.value.find(e => e.id === id);
   }
@@ -271,96 +287,359 @@ export class EstimationService {
     if (!estimation) return [];
 
     const recommendations: Recommendation[] = [];
+    const isFeature = estimation.type === 'feature';
+    const isSumMode = isFeature && estimation.complexityMode === 'sum-us';
+    const itemLabel = isFeature ? 'feature' : 'user story';
+    const ItemLabel = isFeature ? 'Feature' : 'User Story';
 
+    // Mode Somme des US : conseils spécifiques
+    if (isSumMode) {
+      const childUS = this.getUserStoriesForFeature(estimation.id);
+      
+      if (childUS.length === 0) {
+        recommendations.push({
+          type: 'info',
+          icon: '📋',
+          title: 'Aucune User Story rattachée',
+          text: 'Cette feature est en mode "Somme des US" mais aucune user story n\'y est rattachée. Créez des US et liez-les à cette feature pour calculer sa complexité automatiquement.'
+        });
+      } else {
+        // Analyser les US rattachées
+        const avgUS = childUS.reduce((sum, us) => {
+          return sum + (us.complexity + us.uncertainty + us.risk + us.size + us.effort) / 5;
+        }, 0) / childUS.length;
+
+        recommendations.push({
+          type: 'info',
+          icon: '📊',
+          title: `${childUS.length} User ${childUS.length > 1 ? 'Stories' : 'Story'} rattachée${childUS.length > 1 ? 's' : ''}`,
+          text: `La complexité de cette feature est calculée automatiquement à partir des ${childUS.length} US liées. Score moyen des US : ${Math.round(avgUS)}%.`
+        });
+
+        // Identifier les US problématiques
+        const highRiskUS = childUS.filter(us => us.risk >= 75);
+        const highUncertaintyUS = childUS.filter(us => us.uncertainty >= 75);
+        const largeUS = childUS.filter(us => us.size >= 75);
+
+        if (highRiskUS.length > 0) {
+          recommendations.push({
+            type: 'danger',
+            icon: '🔴',
+            title: `${highRiskUS.length} US à risque élevé`,
+            text: `Attention : ${highRiskUS.length} user ${highRiskUS.length > 1 ? 'stories présentent' : 'story présente'} un risque critique. Traitez ces risques en priorité avant de poursuivre la feature.`,
+            dimension: 'risk'
+          });
+        }
+
+        if (highUncertaintyUS.length > 0) {
+          recommendations.push({
+            type: 'warning',
+            icon: '⚠️',
+            title: `${highUncertaintyUS.length} US avec forte incertitude`,
+            text: `${highUncertaintyUS.length} user ${highUncertaintyUS.length > 1 ? 'stories nécessitent' : 'story nécessite'} des clarifications. Planifiez des sessions de refinement ciblées.`,
+            dimension: 'uncertainty'
+          });
+        }
+
+        if (largeUS.length > 0) {
+          recommendations.push({
+            type: 'warning',
+            icon: '⚠️',
+            title: `${largeUS.length} US volumineuse${largeUS.length > 1 ? 's' : ''}`,
+            text: `${largeUS.length} user ${largeUS.length > 1 ? 'stories sont très grandes' : 'story est très grande'}. Envisagez de les redécouper pour faciliter le suivi.`,
+            dimension: 'size'
+          });
+        }
+
+        // Message positif si tout va bien
+        if (avgUS <= 30 && highRiskUS.length === 0 && highUncertaintyUS.length === 0) {
+          recommendations.push({
+            type: 'success',
+            icon: '✅',
+            title: 'Feature bien découpée',
+            text: 'Les user stories de cette feature sont bien calibrées. L\'équipe peut avancer sereinement.'
+          });
+        }
+      }
+
+      return recommendations;
+    }
+
+    // Mode classique : analyse des dimensions CURSE
     const { size, complexity, uncertainty, risk, effort } = estimation;
     const avg = (complexity + uncertainty + risk + size + effort) / 5;
 
-    // Analyse de la taille
+    if (isFeature) {
+      // === CONSEILS SPÉCIFIQUES AUX FEATURES ===
+      this.addFeatureRecommendations(recommendations, estimation, avg);
+    } else {
+      // === CONSEILS POUR LES USER STORIES ===
+      this.addUserStoryRecommendations(recommendations, estimation, avg);
+    }
+
+    return recommendations;
+  }
+
+  /**
+   * Ajoute les recommandations spécifiques aux Features
+   */
+  private addFeatureRecommendations(
+    recommendations: Recommendation[],
+    estimation: Estimation,
+    avg: number
+  ): void {
+    const { size, complexity, uncertainty, risk, effort } = estimation;
+
+    // === ERREURS (DANGER) - Reprises des US, adaptées au vocabulaire feature ===
+    
+    // Taille élevée
     if (size >= 75) {
       recommendations.push({
         type: 'danger',
-        icon: '❗',
-        title: 'Taille importante',
-        text: 'Cette user story semble très volumineuse. Envisagez de la découper en plusieurs stories plus petites et indépendantes pour faciliter le suivi et réduire les risques.',
+        icon: '🔴',
+        title: 'Feature volumineuse',
+        text: 'Le périmètre est large. Envisagez de découper en features plus petites ou passez en mode "Somme des US" pour un meilleur pilotage.',
         dimension: 'size'
       });
-    } else if (size >= 50) {
+    }
+
+    // Complexité élevée
+    if (complexity >= 75) {
+      recommendations.push({
+        type: 'danger',
+        icon: '🔴',
+        title: 'Complexité élevée',
+        text: 'La complexité est importante. Prévoyez des spikes techniques et validez l\'architecture avant de lancer le développement.',
+        dimension: 'complexity'
+      });
+    }
+
+    // Incertitude élevée
+    if (uncertainty >= 75) {
+      recommendations.push({
+        type: 'danger',
+        icon: '🔴',
+        title: 'Incertitude élevée',
+        text: 'Plusieurs inconnues subsistent. Organisez des ateliers de cadrage (Impact Mapping, Event Storming) pour clarifier.',
+        dimension: 'uncertainty'
+      });
+    }
+
+    // Risque élevé
+    if (risk >= 75) {
+      recommendations.push({
+        type: 'danger',
+        icon: '🔴',
+        title: 'Risques élevés',
+        text: 'Les risques identifiés sont importants. Établissez un plan de mitigation et identifiez des alternatives.',
+        dimension: 'risk'
+      });
+    }
+
+    // Effort élevé
+    if (effort >= 75) {
+      recommendations.push({
+        type: 'danger',
+        icon: '🔴',
+        title: 'Effort important',
+        text: 'L\'effort requis est conséquent. Planifiez en plusieurs itérations avec des jalons intermédiaires.',
+        dimension: 'effort'
+      });
+    }
+
+    // === WARNINGS - Spécifiques aux features (stratégiques, orientés gouvernance) ===
+
+    // Taille moyenne → conseil de découpage produit
+    if (size >= 50 && size < 75) {
+      recommendations.push({
+        type: 'warning',
+        icon: '⚠️',
+        title: 'Périmètre à structurer',
+        text: 'Le périmètre est conséquent. Identifiez un MVP et envisagez un découpage en releases pour livrer de la valeur plus tôt.',
+        dimension: 'size'
+      });
+    }
+
+    // Complexité moyenne → conseil architecture
+    if (complexity >= 50 && complexity < 75) {
+      recommendations.push({
+        type: 'warning',
+        icon: '⚠️',
+        title: 'Architecture à définir',
+        text: 'Assurez-vous que l\'architecture cible est documentée et validée par l\'équipe technique avant de démarrer les développements.',
+        dimension: 'complexity'
+      });
+    }
+
+    // Incertitude moyenne → conseil de cadrage
+    if (uncertainty >= 50 && uncertainty < 75) {
+      recommendations.push({
+        type: 'warning',
+        icon: '⚠️',
+        title: 'Cadrage à renforcer',
+        text: 'Des zones restent floues. Planifiez des sessions de refinement avec les parties prenantes pour clarifier les attentes.',
+        dimension: 'uncertainty'
+      });
+    }
+
+    // Risque moyen → conseil de suivi
+    if (risk >= 50 && risk < 75) {
+      recommendations.push({
+        type: 'warning',
+        icon: '⚠️',
+        title: 'Risques à piloter',
+        text: 'Intégrez le suivi des risques dans vos cérémonies agiles (sprint review, rétrospective) et préparez des plans de contingence.',
+        dimension: 'risk'
+      });
+    }
+
+    // Effort moyen → conseil de staffing
+    if (effort >= 50 && effort < 75) {
+      recommendations.push({
+        type: 'warning',
+        icon: '⚠️',
+        title: 'Capacité à anticiper',
+        text: 'Vérifiez que les ressources nécessaires sont disponibles et planifiées. Anticipez les besoins en compétences spécifiques.',
+        dimension: 'effort'
+      });
+    }
+
+    // Conseil feature sans US (en mode feature-only)
+    const childUS = this.getUserStoriesForFeature(estimation.id);
+    if (estimation.complexityMode !== 'sum-us' && childUS.length === 0) {
+      recommendations.push({
+        type: 'info',
+        icon: '📝',
+        title: 'Pas encore de User Stories',
+        text: 'Aucune US n\'est rattachée à cette feature. Pensez à la décomposer en user stories pour faciliter le suivi et l\'estimation.'
+      });
+    }
+
+    // Message positif
+    if (recommendations.filter(r => r.type === 'danger' || r.type === 'warning').length === 0) {
+      if (avg <= 25) {
+        recommendations.push({
+          type: 'success',
+          icon: '✅',
+          title: 'Feature bien calibrée',
+          text: 'Cette feature est maîtrisée sur tous les axes. L\'équipe peut planifier son développement sereinement.'
+        });
+      } else if (avg <= 40) {
+        recommendations.push({
+          type: 'success',
+          icon: '👍',
+          title: 'Bonne maîtrise',
+          text: 'Les indicateurs sont globalement favorables. Restez vigilants sur les points de friction éventuels.'
+        });
+      }
+    }
+  }
+
+  /**
+   * Ajoute les recommandations spécifiques aux User Stories
+   */
+  private addUserStoryRecommendations(
+    recommendations: Recommendation[],
+    estimation: Estimation,
+    avg: number
+  ): void {
+    const { size, complexity, uncertainty, risk, effort } = estimation;
+
+    // === ERREURS (DANGER) ===
+
+    if (size >= 75) {
+      recommendations.push({
+        type: 'danger',
+        icon: '🔴',
+        title: 'User Story trop grande',
+        text: 'Cette US est trop volumineuse pour un sprint. Découpez-la en plusieurs stories indépendantes (INVEST) pour faciliter le suivi.',
+        dimension: 'size'
+      });
+    }
+
+    if (complexity >= 75) {
+      recommendations.push({
+        type: 'danger',
+        icon: '🔴',
+        title: 'Complexité élevée',
+        text: 'La complexité technique est trop importante. Prévoyez un spike ou du mob programming pour explorer les solutions.',
+        dimension: 'complexity'
+      });
+    }
+
+    if (uncertainty >= 75) {
+      recommendations.push({
+        type: 'danger',
+        icon: '🔴',
+        title: 'Forte incertitude',
+        text: 'Trop d\'inconnues persistent. Clarifiez avec le Product Owner et les experts métier avant de vous engager.',
+        dimension: 'uncertainty'
+      });
+    }
+
+    if (risk >= 75) {
+      recommendations.push({
+        type: 'danger',
+        icon: '🔴',
+        title: 'Risque élevé',
+        text: 'Les risques sont significatifs. Définissez un plan de mitigation et prévoyez des solutions de fallback.',
+        dimension: 'risk'
+      });
+    }
+
+    if (effort >= 75) {
+      recommendations.push({
+        type: 'danger',
+        icon: '🔴',
+        title: 'Effort conséquent',
+        text: 'L\'effort requis est important. Envisagez de répartir le travail ou de découper cette US.',
+        dimension: 'effort'
+      });
+    }
+
+    // === WARNINGS ===
+
+    if (size >= 50 && size < 75) {
       recommendations.push({
         type: 'warning',
         icon: '⚠️',
         title: 'Taille modérée',
-        text: 'La taille est conséquente. Identifiez les sous-tâches distinctes pour mieux répartir le travail.',
+        text: 'La taille est notable. Identifiez les sous-tâches techniques pour mieux répartir le travail.',
         dimension: 'size'
       });
     }
 
-    // Analyse de la complexité
-    if (complexity >= 75) {
-      recommendations.push({
-        type: 'danger',
-        icon: '❗',
-        title: 'Complexité élevée',
-        text: 'La complexité technique est importante. Prévoyez un spike technique ou une session de mob programming pour explorer les solutions avant de commencer.',
-        dimension: 'complexity'
-      });
-    } else if (complexity >= 50) {
+    if (complexity >= 50 && complexity < 75) {
       recommendations.push({
         type: 'warning',
         icon: '⚠️',
         title: 'Complexité technique',
-        text: 'Assurez-vous que l\'équipe maîtrise les technologies impliquées. Le pair programming pourrait être bénéfique.',
+        text: 'Assurez-vous que l\'équipe maîtrise les technologies impliquées. Le pair programming pourrait aider.',
         dimension: 'complexity'
       });
     }
 
-    // Analyse de l'incertitude
-    if (uncertainty >= 75) {
-      recommendations.push({
-        type: 'danger',
-        icon: '❗',
-        title: 'Forte incertitude',
-        text: 'Trop d\'inconnues persistent. Organisez une session de clarification avec le Product Owner et les experts métier avant de vous engager.',
-        dimension: 'uncertainty'
-      });
-    } else if (uncertainty >= 50) {
+    if (uncertainty >= 50 && uncertainty < 75) {
       recommendations.push({
         type: 'warning',
         icon: '⚠️',
         title: 'Incertitude modérée',
-        text: 'Certains aspects restent flous. Validez les hypothèses clés avec le PO et documentez les décisions prises.',
+        text: 'Certains aspects restent flous. Validez les hypothèses clés avec le PO avant de coder.',
         dimension: 'uncertainty'
       });
     }
 
-    // Analyse du risque
-    if (risk >= 75) {
-      recommendations.push({
-        type: 'danger',
-        icon: '❗',
-        title: 'Risque élevé',
-        text: 'Les risques identifiés sont significatifs. Définissez un plan de mitigation et prévoyez des solutions de fallback avant de démarrer.',
-        dimension: 'risk'
-      });
-    } else if (risk >= 50) {
+    if (risk >= 50 && risk < 75) {
       recommendations.push({
         type: 'warning',
         icon: '⚠️',
         title: 'Risques à surveiller',
-        text: 'Des risques ont été identifiés. Surveillez-les régulièrement et préparez des alternatives si nécessaire.',
+        text: 'Des risques ont été identifiés. Surveillez-les régulièrement et préparez des alternatives.',
         dimension: 'risk'
       });
     }
 
-    // Analyse de l'effort
-    if (effort >= 75) {
-      recommendations.push({
-        type: 'danger',
-        icon: '❗',
-        title: 'Effort conséquent',
-        text: 'L\'effort requis est important. Planifiez des points de synchronisation réguliers et envisagez de répartir le travail sur plusieurs développeurs.',
-        dimension: 'effort'
-      });
-    } else if (effort >= 50) {
+    if (effort >= 50 && effort < 75) {
       recommendations.push({
         type: 'warning',
         icon: '⚠️',
@@ -370,8 +649,18 @@ export class EstimationService {
       });
     }
 
-    // Message global basé sur la moyenne
-    if (recommendations.length === 0) {
+    // US orpheline
+    if (!estimation.parentFeatureId) {
+      recommendations.push({
+        type: 'info',
+        icon: '🔗',
+        title: 'US sans feature parente',
+        text: 'Cette user story n\'est rattachée à aucune feature. Envisagez de la lier pour une meilleure organisation du backlog.'
+      });
+    }
+
+    // Message positif
+    if (recommendations.filter(r => r.type === 'danger' || r.type === 'warning').length === 0) {
       if (avg <= 25) {
         recommendations.push({
           type: 'success',
@@ -384,12 +673,10 @@ export class EstimationService {
           type: 'success',
           icon: '👍',
           title: 'Bonne estimation',
-          text: 'Les indicateurs sont globalement favorables. Restez vigilants sur les éventuels points de friction.'
+          text: 'Les indicateurs sont globalement favorables. Restez vigilants sur les points de friction éventuels.'
         });
       }
     }
-
-    return recommendations;
   }
 }
 
