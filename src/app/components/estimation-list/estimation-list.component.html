@@ -4,9 +4,12 @@
       <h3 class="text-lg lg:text-xl font-bold text-glass-primary">Mes estimations</h3>
       <button
         (click)="onNewEstimation()"
-        class="px-3 py-1 bg-green-600 text-white text-sm rounded-lg hover:bg-green-500 transition-colors shadow-lg shadow-green-600/20"
+        class="px-3 py-1 text-green-600 text-sm hover:text-green-500 transition-colors flex items-center gap-1"
         title="Nouvelle estimation"
       >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
         Ajouter
       </button>
     </div>
@@ -33,15 +36,31 @@
           </svg>
         </button>
       </div>
-      <!-- Filtre par type -->
-      <!--<select
-        [(ngModel)]="typeFilter"
-        class="w-full py-1 px-2 text-xs glass-input rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500/50 cursor-pointer"
-      >
-        <option value="">Tous les types</option>
-        <option value="user-story">🧩 User Story</option>
-        <option value="feature">⭐ Feature</option>
-      </select>-->
+      <!-- Toggle affichage date/heure et filtre auteur -->
+      <div class="flex items-center gap-2 mt-2">
+        <!-- Toggle date/heure -->
+        <button
+          (click)="showDateTime = !showDateTime"
+          class="flex items-center gap-1.5 px-2 py-1 text-[10px] rounded-md transition-colors"
+          [ngClass]="showDateTime ? 'bg-blue-500/20 text-blue-400' : 'bg-glass-inner text-glass-muted hover:text-glass-secondary'"
+          title="Afficher/masquer la date et l'heure"
+        >
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Date
+        </button>
+        
+        <!-- Filtre par auteur -->
+        <select
+          *ngIf="uniqueAuthors.length > 0"
+          [(ngModel)]="authorFilter"
+          class="flex-1 py-1 px-2 text-[10px] glass-input rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500/50 cursor-pointer"
+        >
+          <option value="">Tous les auteurs</option>
+          <option *ngFor="let author of uniqueAuthors" [value]="author">{{ author }}</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -76,29 +95,28 @@
           [class.selected]="selectedId === feature.id"
           class="glass-list-item rounded-lg px-1 py-1.5 cursor-pointer flex items-center gap-2"
         >
-          <!-- Chevron pour expand/collapse -->
-          <button 
-            *ngIf="getChildUserStories(feature.id).length > 0"
-            (click)="toggleFeatureExpand(feature.id); $event.stopPropagation()"
-            class="w-4 h-4 flex items-center justify-center text-glass-muted hover:text-glass-secondary transition-colors shrink-0"
-          >
-            <svg 
-              class="w-3 h-3 transition-transform duration-200" 
-              [class.rotate-90]="isFeatureExpanded(feature.id)"
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          <!-- Chevron pour expand/collapse (seulement si la feature a des US) -->
+          <ng-container *ngIf="getChildUserStories(feature.id).length > 0">
+            <button 
+              (click)="toggleFeatureExpand(feature.id); $event.stopPropagation()"
+              class="w-4 h-4 flex items-center justify-center text-glass-muted hover:text-glass-secondary transition-colors shrink-0"
             >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          <span *ngIf="getChildUserStories(feature.id).length === 0" class="w-4 shrink-0"></span>
-          
+              <svg 
+                class="w-3 h-3 transition-transform duration-200" 
+                [class.rotate-90]="isFeatureExpanded(feature.id)"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </ng-container>
           <span>⭐</span>
           <div class="flex-1 min-w-0">
             <h4 class="font-medium text-glass-primary text-sm truncate">{{ feature.name }}</h4>
-            <p class="text-[10px] text-glass-muted truncate">
-              {{ formatDate(feature.updatedAt) }}
-              <span *ngIf="getChildUserStories(feature.id).length > 0" class="ml-1">
-                · {{ getChildUserStories(feature.id).length }} US
+            <p *ngIf="showDateTime || getChildUserStories(feature.id).length > 0" class="text-[10px] text-glass-muted truncate">
+              <span *ngIf="showDateTime">{{ formatDate(feature.updatedAt) }}</span>
+              <span *ngIf="getChildUserStories(feature.id).length > 0" [class.ml-1]="showDateTime">
+                <span *ngIf="showDateTime">·</span> {{ getChildUserStories(feature.id).length }} US
               </span>
             </p>
           </div>
@@ -121,7 +139,7 @@
             <span>🧩</span>
             <div class="flex-1 min-w-0">
               <h4 class="font-medium text-glass-primary text-sm truncate">{{ userStory.name }}</h4>
-              <p class="text-[10px] text-glass-muted truncate">{{ formatDate(userStory.updatedAt) }}</p>
+              <p *ngIf="showDateTime" class="text-[10px] text-glass-muted truncate">{{ formatDate(userStory.updatedAt) }}</p>
             </div>
             <span class="text-[11px] shrink-0" [ngClass]="getTShirtSize(userStory).textColor">
               {{ getComplexityPointsCeil(userStory) }} pts
@@ -148,7 +166,7 @@
       <span>🧩</span>
       <div class="flex-1 min-w-0">
         <h4 class="font-medium text-glass-primary text-sm truncate">{{ userStory.name }}</h4>
-        <p class="text-[10px] text-glass-muted truncate">{{ formatDate(userStory.updatedAt) }}</p>
+        <p *ngIf="showDateTime" class="text-[10px] text-glass-muted truncate">{{ formatDate(userStory.updatedAt) }}</p>
       </div>
       <span class="text-[11px] shrink-0" [ngClass]="getTShirtSize(userStory).textColor">
         {{ getComplexityPointsCeil(userStory) }} pts

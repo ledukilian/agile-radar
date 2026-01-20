@@ -44,15 +44,21 @@ export class EstimationFormComponent implements OnInit, OnChanges {
   tailles: Taille[] = [];
   private saveTimeout?: ReturnType<typeof setTimeout>;
   
-  // T-shirt sizes avec leurs ranges de points de complexité (progression Fibonacci)
-  tShirtSizes = [
-    { size: 'XS', min: 1, max: 3, color: 'bg-green-100 text-green-700' },
-    { size: 'S', min: 3, max: 8, color: 'bg-lime-100 text-lime-700' },
-    { size: 'M', min: 8, max: 21, color: 'bg-yellow-100 text-yellow-700' },
-    { size: 'L', min: 21, max: 55, color: 'bg-orange-100 text-orange-700' },
-    { size: 'XL', min: 55, max: 144, color: 'bg-red-100 text-red-700' },
-    { size: 'XXL', min: 144, max: 377, color: 'bg-purple-100 text-purple-700' }
-  ];
+  // T-shirt sizes - récupérées du service de paramètres selon le type
+  get tShirtSizes() {
+    // Utiliser le référentiel approprié selon le type de l'estimation courante
+    const type = this.formData?.type || 'user-story';
+    const sizes = type === 'feature' 
+      ? this.settingsService.getFeatureTShirtSizes()
+      : this.settingsService.getUserStoryTShirtSizes();
+    
+    return sizes.map(s => ({
+      size: s.size,
+      min: 0, // min non utilisé dans ce composant
+      max: s.max,
+      color: `${s.bgColor} ${s.textColor}`
+    }));
+  }
   
   // Graduations spécifiques pour chaque axe CURSE (en français)
   graduations = {
@@ -441,49 +447,42 @@ export class EstimationFormComponent implements OnInit, OnChanges {
   }
 
   /**
-   * Calcule les points de complexité à partir du score CURSE moyen (0-100)
-   * Utilise une formule exponentielle pour suivre la progression Fibonacci
-   * Score 0 → 1 point, Score 100 → 377 points
+   * Calcule les points de complexité à partir du score CURSE
+   * Utilise les poids configurés dans les paramètres
    */
   calculateComplexityPoints(): number {
-    const curseAverage = this.getCurseAverage();
-    return this.calculatePointsFromAverage(curseAverage);
+    return this.settingsService.calculateComplexityPoints({
+      complexity: this.formData.complexity,
+      uncertainty: this.formData.uncertainty,
+      risk: this.formData.risk,
+      size: this.formData.size,
+      effort: this.formData.effort
+    });
   }
 
   /**
    * Calcule les points de complexité pour une estimation donnée
+   * Utilise les poids configurés dans les paramètres
    */
   calculatePointsForEstimation(estimation: Estimation): number {
-    const avg = (estimation.complexity + estimation.uncertainty + estimation.risk + estimation.size + estimation.effort) / 5;
-    return this.calculatePointsFromAverage(avg);
-  }
-
-  /**
-   * Calcule les points à partir d'une moyenne CURSE
-   */
-  private calculatePointsFromAverage(curseAverage: number): number {
-    // Normaliser entre 0 et 1
-    const normalized = curseAverage / 100;
-    // Formule exponentielle: 377^x donne une progression naturelle vers Fibonacci
-    // Minimum 1 point, maximum 377 points
-    const points = Math.pow(377, normalized);
-    return Math.round(points * 10) / 10; // Arrondir à 1 décimale
+    return Math.ceil(this.settingsService.calculateComplexityPoints(estimation));
   }
 
   /**
    * Détermine la T-shirt size en fonction des points de complexité
+   * Utilise les seuils configurés dans les paramètres et le référentiel approprié selon le type
    */
   getTShirtSize(): { size: string; min: number; max: number; color: string } {
     const points = this.calculateComplexityPoints();
+    const type = this.formData?.type || 'user-story';
+    const baseTShirt = this.settingsService.getTShirtSizeByPoints(points, type);
     
-    // Trouver la taille correspondante
-    for (const tShirt of this.tShirtSizes) {
-      if (points < tShirt.max) {
-        return tShirt;
-      }
-    }
-    // Si au-delà de tout (ne devrait pas arriver), retourner XXL
-    return this.tShirtSizes[this.tShirtSizes.length - 1];
+    return {
+      size: baseTShirt.size,
+      min: 0,
+      max: baseTShirt.max,
+      color: `${baseTShirt.bgColor} ${baseTShirt.textColor}`
+    };
   }
 
   /**

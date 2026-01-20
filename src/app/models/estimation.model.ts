@@ -30,7 +30,38 @@ export interface BaseSettings {
   author: string;
 }
 
+// Poids des dimensions pour le calcul des points (multiplicateurs)
+export interface DimensionWeights {
+  complexity: number; // Multiplicateur de la complexité (ex: 1.5 = ×1.5)
+  uncertainty: number; // Multiplicateur de l'incertitude (ex: 2 = ×2)
+  risk: number; // Multiplicateur du risque (ex: 2 = ×2)
+  size: number; // Multiplicateur de la taille (ex: 1 = ×1)
+  effort: number; // Multiplicateur de l'effort (ex: 1 = ×1)
+}
+
+// Configuration d'une taille T-shirt
+export interface TShirtSize {
+  size: string; // Ex: "XS", "S", "M", "L", "XL", "XXL"
+  max: number; // Seuil max de points pour cette taille
+  bgColor: string; // Classe Tailwind pour la couleur de fond
+  textColor: string; // Classe Tailwind pour la couleur du texte
+}
+
+// Configuration des tailles T-shirt séparées par type
+export interface TShirtSizesConfig {
+  userStory: TShirtSize[]; // Tailles pour les User Stories
+  feature: TShirtSize[]; // Tailles pour les Features (seuils plus élevés)
+}
+
+// Paramètres avancés
+export interface AdvancedSettings {
+  dimensionWeights: DimensionWeights;
+  tShirtSizes: TShirtSize[]; // Deprecated - pour rétrocompatibilité
+  tShirtSizesConfig?: TShirtSizesConfig; // Nouvelle config séparée US/Feature
+}
+
 export interface CurseConfig {
   baseSettings: BaseSettings;
   tailles: Taille[];
+  advancedSettings?: AdvancedSettings; // Paramètres avancés optionnels
 }

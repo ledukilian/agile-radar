@@ -29,15 +29,15 @@ export class RadarChartComponent implements OnInit, OnChanges {
   copySuccess = false;
   showRecommendations = false;
 
-  // T-shirt sizes avec leurs ranges de points de complexité (progression Fibonacci)
-  tShirtSizes = [
-    { size: 'XS', min: 1, max: 3, bgColor: 'bg-green-100', textColor: 'text-green-700', ringColor: 'ring-green-500', fillColor: 'rgba(34, 197, 94, 0.25)', borderColor: 'rgba(34, 197, 94, 1)' },
-    { size: 'S', min: 3, max: 8, bgColor: 'bg-lime-100', textColor: 'text-lime-700', ringColor: 'ring-lime-500', fillColor: 'rgba(132, 204, 22, 0.25)', borderColor: 'rgba(132, 204, 22, 1)' },
-    { size: 'M', min: 8, max: 21, bgColor: 'bg-yellow-100', textColor: 'text-yellow-700', ringColor: 'ring-yellow-500', fillColor: 'rgba(234, 179, 8, 0.25)', borderColor: 'rgba(234, 179, 8, 1)' },
-    { size: 'L', min: 21, max: 55, bgColor: 'bg-orange-100', textColor: 'text-orange-700', ringColor: 'ring-orange-500', fillColor: 'rgba(249, 115, 22, 0.25)', borderColor: 'rgba(249, 115, 22, 1)' },
-    { size: 'XL', min: 55, max: 144, bgColor: 'bg-red-100', textColor: 'text-red-700', ringColor: 'ring-red-500', fillColor: 'rgba(239, 68, 68, 0.25)', borderColor: 'rgba(239, 68, 68, 1)' },
-    { size: 'XXL', min: 144, max: 377, bgColor: 'bg-purple-100', textColor: 'text-purple-700', ringColor: 'ring-purple-500', fillColor: 'rgba(168, 85, 247, 0.25)', borderColor: 'rgba(168, 85, 247, 1)' }
-  ];
+  // Mapping des couleurs de remplissage et bordure pour chaque taille T-shirt
+  private tShirtColorMap: { [key: string]: { fillColor: string; borderColor: string; ringColor: string } } = {
+    'XS': { fillColor: 'rgba(34, 197, 94, 0.25)', borderColor: 'rgba(34, 197, 94, 1)', ringColor: 'ring-green-500' },
+    'S': { fillColor: 'rgba(132, 204, 22, 0.25)', borderColor: 'rgba(132, 204, 22, 1)', ringColor: 'ring-lime-500' },
+    'M': { fillColor: 'rgba(234, 179, 8, 0.25)', borderColor: 'rgba(234, 179, 8, 1)', ringColor: 'ring-yellow-500' },
+    'L': { fillColor: 'rgba(249, 115, 22, 0.25)', borderColor: 'rgba(249, 115, 22, 1)', ringColor: 'ring-orange-500' },
+    'XL': { fillColor: 'rgba(239, 68, 68, 0.25)', borderColor: 'rgba(239, 68, 68, 1)', ringColor: 'ring-red-500' },
+    'XXL': { fillColor: 'rgba(168, 85, 247, 0.25)', borderColor: 'rgba(168, 85, 247, 1)', ringColor: 'ring-purple-500' }
+  };
 
   // Graduations pour le calcul
   private graduations = {
@@ -254,12 +254,12 @@ export class RadarChartComponent implements OnInit, OnChanges {
 
   /**
    * Calcule les points de complexité à partir du score CURSE moyen
+   * Utilise les poids configurés dans les paramètres
    */
   calculateComplexityPoints(): number {
-    const curseAverage = this.getCurseAverage();
-    const normalized = curseAverage / 100;
-    const points = Math.pow(377, normalized);
-    return Math.round(points * 10) / 10;
+    if (!this.estimation) return 0;
+    const values = this.getEffectiveValues();
+    return this.settingsService.calculateComplexityPoints(values);
   }
 
   /**
@@ -288,16 +288,23 @@ export class RadarChartComponent implements OnInit, OnChanges {
 
   /**
    * Détermine la T-shirt size en fonction des points de complexité
+   * Utilise les seuils configurés dans les paramètres et ajoute les couleurs de graphique
+   * Le référentiel utilisé dépend du type d'estimation (US ou Feature)
    */
-  getTShirtSize(): { size: string; min: number; max: number; bgColor: string; textColor: string; fillColor: string; borderColor: string } {
-    const points = this.calculateComplexityPoints();
+  getTShirtSize(): { size: string; max: number; bgColor: string; textColor: string; fillColor: string; borderColor: string; ringColor: string } {
+    const points = this.getFinalComplexityPoints();
+    const type = this.estimation?.type || 'user-story';
+    const baseTShirt = this.settingsService.getTShirtSizeByPoints(points, type);
     
-    for (const tShirt of this.tShirtSizes) {
-      if (points < tShirt.max) {
-        return tShirt;
-      }
-    }
-    return this.tShirtSizes[this.tShirtSizes.length - 1];
+    // Ajouter les couleurs de remplissage et bordure pour le graphique
+    const colors = this.tShirtColorMap[baseTShirt.size] || this.tShirtColorMap['M'];
+    
+    return {
+      ...baseTShirt,
+      fillColor: colors.fillColor,
+      borderColor: colors.borderColor,
+      ringColor: colors.ringColor
+    };
   }
 
   /**
@@ -508,12 +515,10 @@ export class RadarChartComponent implements OnInit, OnChanges {
 
   /**
    * Calcule les points de complexité pour une estimation donnée
+   * Utilise les poids configurés dans les paramètres
    */
   calculatePointsForEstimation(estimation: Estimation): number {
-    const avg = (estimation.complexity + estimation.uncertainty + estimation.risk + estimation.size + estimation.effort) / 5;
-    const normalized = avg / 100;
-    const points = Math.pow(377, normalized);
-    return Math.ceil(points);
+    return Math.ceil(this.settingsService.calculateComplexityPoints(estimation));
   }
 
   /**
@@ -551,7 +556,7 @@ export class RadarChartComponent implements OnInit, OnChanges {
   getTShirtProgressClass(): string {
     const tshirt = this.getTShirtSize();
     // Convertir bg-xxx-100 en bg-xxx-500
-    return tshirt.bgColor.replace('-100', '-500');
+    return (tshirt.bgColor || 'bg-yellow-100').replace('-100', '-500');
   }
 
   /**
