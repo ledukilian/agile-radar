@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Estimation, DimensionWeights, TShirtSize, TShirtSizesConfig } from './models/estimation.model';
@@ -7,6 +7,7 @@ import { RadarChartComponent } from './components/radar-chart/radar-chart.compon
 import { EstimationListComponent } from './components/estimation-list/estimation-list.component';
 import { EstimationService } from './services/estimation.service';
 import { SettingsService } from './services/settings.service';
+import { TourService } from './services/tour.service';
 import { environment } from '../environments/environment';
 
 @Component({
@@ -22,7 +23,7 @@ import { environment } from '../environments/environment';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, AfterViewInit {
   selectedEstimation?: Estimation;
   appVersion = environment.version;
   isDarkMode = false;
@@ -51,7 +52,8 @@ export class AppComponent implements OnInit {
 
   constructor(
     private estimationService: EstimationService,
-    private settingsService: SettingsService
+    private settingsService: SettingsService,
+    private tourService: TourService
   ) {}
 
   ngOnInit(): void {
@@ -61,6 +63,23 @@ export class AppComponent implements OnInit {
       this.isDarkMode = savedTheme === 'dark';
     }
     // Par défaut : mode clair (isDarkMode = false)
+  }
+
+  ngAfterViewInit(): void {
+    // Lancer le tour automatiquement pour les nouveaux utilisateurs
+    setTimeout(() => {
+      if (!this.tourService.isTourCompleted()) {
+        this.tourService.startTour();
+      }
+    }, 500);
+  }
+
+  /**
+   * Lance ou relance le tour guidé
+   */
+  startTour(): void {
+    this.tourService.resetTour();
+    this.tourService.startTour();
   }
 
   toggleTheme(): void {

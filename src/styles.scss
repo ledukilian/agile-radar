@@ -2,6 +2,152 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========== SHEPHERD.JS TOUR STYLES ========== */
+@import 'shepherd.js/dist/css/shepherd.css';
+
+/* Désactiver le zoom pendant le tour pour éviter les décalages */
+body.tour-active {
+  zoom: 1 !important;
+  overflow: hidden !important;
+  height: 100vh !important;
+}
+
+body.tour-active .app-background {
+  min-height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+}
+
+/* Personnalisation du thème Shepherd - THÈME CLAIR */
+.shepherd-theme-custom {
+  max-width: 400px;
+}
+
+.shepherd-element {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 16px;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.15),
+    0 0 40px rgba(99, 102, 241, 0.1);
+}
+
+.shepherd-arrow::before {
+  background: #ffffff;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.shepherd-header {
+  background: transparent;
+  padding: 1rem 1.25rem 0.5rem;
+  border-bottom: none;
+}
+
+.shepherd-title {
+  color: #1e293b;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.shepherd-cancel-icon {
+  color: #94a3b8;
+  font-size: 1.5rem;
+  font-weight: 300;
+  transition: color 0.2s ease;
+}
+
+.shepherd-cancel-icon:hover {
+  color: #ef4444;
+}
+
+.shepherd-text {
+  color: #475569;
+  padding: 0.5rem 1.25rem 1rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.shepherd-text p {
+  margin: 0;
+}
+
+.shepherd-text ul {
+  padding-left: 0;
+  list-style: none;
+}
+
+.shepherd-text .mt-2 {
+  margin-top: 0.5rem;
+}
+
+.shepherd-text .text-sm {
+  font-size: 0.875rem;
+}
+
+.shepherd-text .space-y-1 > * + * {
+  margin-top: 0.25rem;
+}
+
+.shepherd-footer {
+  padding: 0.75rem 1.25rem 1rem;
+  border-top: 1px solid #e2e8f0;
+  background: transparent;
+}
+
+.shepherd-button {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.shepherd-button-primary {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+}
+
+.shepherd-button-primary:hover,
+.shepherd-button-primary:focus {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+}
+
+.shepherd-button-secondary {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.shepherd-button-secondary:hover {
+  background: #e2e8f0;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+/* Modal overlay */
+.shepherd-modal-overlay-container {
+  fill: rgba(0, 0, 0, 0.5);
+}
+
+/* Animation d'entrée - simple fade sans déplacement */
+.shepherd-element.shepherd-enabled {
+  animation: shepherd-fade-in 0.2s ease-out;
+}
+
+@keyframes shepherd-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 :root {
   /* ========== DARK MODE (défaut) ========== */
   /* Couleurs de fond principales */
@@ -75,51 +221,51 @@ body {
   transition: background 0.3s ease;
 }
 
-/* ========== LIGHT MODE ========== */
+/* ========== LIGHT MODE - ORANGE PASTEL ========== */
 .light-mode {
-  --bg-primary: #f8fafc;
-  --bg-secondary: #e2e8f0;
-  --bg-accent: #cbd5e1;
+  --bg-primary: #fffaf5;
+  --bg-secondary: #fff5eb;
+  --bg-accent: #ffedd5;
   
-  --card-bg: rgba(255, 255, 255, 0.7);
-  --card-bg-hover: rgba(255, 255, 255, 0.85);
-  --card-border: rgba(99, 102, 241, 0.15);
-  --card-border-hover: rgba(99, 102, 241, 0.3);
+  --card-bg: rgba(255, 255, 255, 0.75);
+  --card-bg-hover: rgba(255, 255, 255, 0.9);
+  --card-border: rgba(251, 146, 60, 0.15);
+  --card-border-hover: rgba(251, 146, 60, 0.3);
   
-  --glow-primary: rgba(99, 102, 241, 0.1);
-  --glow-secondary: rgba(168, 85, 247, 0.08);
+  --glow-primary: rgba(251, 146, 60, 0.12);
+  --glow-secondary: rgba(245, 158, 11, 0.1);
 
   --text-primary: #1e293b;
   --text-secondary: #475569;
   --text-muted: #94a3b8;
 
-  --inner-bg: rgba(99, 102, 241, 0.05);
-  --inner-border: rgba(99, 102, 241, 0.1);
-  --divider: rgba(99, 102, 241, 0.15);
+  --inner-bg: rgba(251, 146, 60, 0.05);
+  --inner-border: rgba(251, 146, 60, 0.1);
+  --divider: rgba(251, 146, 60, 0.12);
 
-  --list-bg: rgba(255, 255, 255, 0.5);
-  --list-border: rgba(99, 102, 241, 0.1);
-  --list-hover-bg: rgba(99, 102, 241, 0.08);
-  --list-hover-border: rgba(99, 102, 241, 0.2);
-  --list-selected-bg: rgba(99, 102, 241, 0.15);
-  --list-selected-border: rgba(99, 102, 241, 0.4);
+  --list-bg: rgba(255, 255, 255, 0.6);
+  --list-border: rgba(251, 146, 60, 0.1);
+  --list-hover-bg: rgba(251, 146, 60, 0.08);
+  --list-hover-border: rgba(251, 146, 60, 0.2);
+  --list-selected-bg: rgba(251, 146, 60, 0.12);
+  --list-selected-border: rgba(251, 146, 60, 0.4);
 
-  --input-bg: rgba(255, 255, 255, 0.8);
-  --input-border: rgba(99, 102, 241, 0.2);
+  --input-bg: rgba(255, 255, 255, 0.85);
+  --input-border: rgba(251, 146, 60, 0.15);
   --input-focus-bg: rgba(255, 255, 255, 1);
-  --input-focus-border: rgba(99, 102, 241, 0.5);
+  --input-focus-border: rgba(251, 146, 60, 0.5);
   --input-placeholder: #94a3b8;
 
-  --scrollbar-track: rgba(99, 102, 241, 0.05);
-  --scrollbar-thumb: rgba(99, 102, 241, 0.2);
-  --scrollbar-thumb-hover: rgba(99, 102, 241, 0.35);
+  --scrollbar-track: rgba(251, 146, 60, 0.05);
+  --scrollbar-thumb: rgba(251, 146, 60, 0.2);
+  --scrollbar-thumb-hover: rgba(251, 146, 60, 0.35);
 }
 
 .light-mode.app-background {
   background: 
-    radial-gradient(ellipse at 20% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 100%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(59, 130, 246, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse at 20% 0%, rgba(251, 191, 36, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(251, 146, 60, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(254, 215, 170, 0.2) 0%, transparent 70%),
     linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-accent) 100%);
 }
 
