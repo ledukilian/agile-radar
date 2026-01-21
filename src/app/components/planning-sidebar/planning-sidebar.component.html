@@ -1,0 +1,146 @@
+<div class="sidebar glass-card h-full flex flex-col w-72 border-r border-white/10">
+  <!-- Header -->
+  <div class="sidebar-header px-4 py-3 border-b border-white/10">
+    <h2 class="text-sm font-semibold text-glass-primary flex items-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+      Backlog
+    </h2>
+    <p class="text-xs text-glass-muted mt-0.5">
+      {{ unplannedItems.length }} élément(s) non planifié(s)
+    </p>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters px-3 py-2 border-b border-white/5 space-y-2">
+    <!-- Recherche -->
+    <div class="relative">
+      <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-glass-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <input
+        type="text"
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="onFilterChange()"
+        placeholder="Rechercher..."
+        class="w-full pl-8 pr-3 py-1.5 text-xs glass-input rounded-lg"
+      />
+    </div>
+
+    <!-- Filtre type -->
+    <div class="flex gap-1">
+      <button
+        (click)="typeFilter = 'all'; onFilterChange()"
+        class="flex-1 px-2 py-1 text-xs rounded-md transition-all filter-btn"
+        [ngClass]="{'bg-blue-500 text-white': typeFilter === 'all', 'text-glass-muted': typeFilter !== 'all'}"
+      >
+        Tous
+      </button>
+      <button
+        (click)="typeFilter = 'feature'; onFilterChange()"
+        class="flex-1 px-2 py-1 text-xs rounded-md transition-all flex items-center justify-center gap-1 filter-btn"
+        [ngClass]="{'bg-amber-500 text-white': typeFilter === 'feature', 'text-glass-muted': typeFilter !== 'feature'}"
+      >
+        <span>⭐</span> Features
+      </button>
+      <button
+        (click)="typeFilter = 'user-story'; onFilterChange()"
+        class="flex-1 px-2 py-1 text-xs rounded-md transition-all flex items-center justify-center gap-1 filter-btn"
+        [ngClass]="{'bg-indigo-500 text-white': typeFilter === 'user-story', 'text-glass-muted': typeFilter !== 'user-story'}"
+      >
+        <span>🧩</span> US
+      </button>
+    </div>
+  </div>
+
+  <!-- Liste -->
+  <div class="items-list flex-1 overflow-y-auto p-2 space-y-1">
+    <!-- Message si vide -->
+    <div 
+      *ngIf="filteredItems.length === 0"
+      class="text-center py-8 text-glass-muted"
+    >
+      <span class="text-3xl block mb-2">📭</span>
+      <p class="text-sm" *ngIf="unplannedItems.length === 0">
+        Tous les éléments sont planifiés !
+      </p>
+      <p class="text-sm" *ngIf="unplannedItems.length > 0">
+        Aucun résultat pour ce filtre
+      </p>
+    </div>
+
+    <!-- Features -->
+    <ng-container *ngIf="features.length > 0">
+      <div class="section-header text-[10px] uppercase tracking-wider text-glass-muted px-2 py-1 flex items-center gap-1">
+        <span>⭐</span> Features ({{ features.length }})
+      </div>
+      
+      <div
+        *ngFor="let item of features; trackBy: trackByItem"
+        class="sidebar-item glass-list-item rounded-lg px-2 py-1.5 cursor-grab"
+        [class.border-l-red-500]="hasCriticalDimension(item)"
+        [class.border-l-amber-500]="hasWarningDimension(item)"
+        [class.border-l-green-500]="!hasCriticalDimension(item) && !hasWarningDimension(item)"
+        [attr.data-estimation-id]="item.id"
+      >
+        <div class="flex items-center gap-2">
+          <span class="text-sm shrink-0">⭐</span>
+          <div class="flex-1 min-w-0">
+            <h4 class="text-xs font-medium text-glass-primary truncate">{{ item.name }}</h4>
+          </div>
+          <span 
+            class="px-1.5 py-0.5 text-[10px] font-medium rounded shrink-0"
+            [ngClass]="[getTShirtSize(item).bgColor, getTShirtSize(item).textColor]"
+          >
+            {{ getPoints(item) }} pts
+          </span>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- User Stories -->
+    <ng-container *ngIf="userStories.length > 0">
+      <div class="section-header text-[10px] uppercase tracking-wider text-glass-muted px-2 py-1 mt-2 flex items-center gap-1">
+        <span>🧩</span> User Stories ({{ userStories.length }})
+      </div>
+      
+      <div
+        *ngFor="let item of userStories; trackBy: trackByItem"
+        class="sidebar-item glass-list-item rounded-lg px-2 py-1.5 cursor-grab"
+        [class.border-l-red-500]="hasCriticalDimension(item)"
+        [class.border-l-amber-500]="hasWarningDimension(item)"
+        [class.border-l-green-500]="!hasCriticalDimension(item) && !hasWarningDimension(item)"
+        [attr.data-estimation-id]="item.id"
+      >
+        <div class="flex items-center gap-2">
+          <span class="text-sm shrink-0">🧩</span>
+          <div class="flex-1 min-w-0">
+            <h4 class="text-xs font-medium text-glass-primary truncate">{{ item.name }}</h4>
+          </div>
+          <span 
+            class="text-[10px] shrink-0"
+            [ngClass]="getTShirtSize(item).textColor"
+          >
+            {{ getPoints(item) }} pts
+          </span>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- Footer avec légende -->
+  <div class="sidebar-footer px-3 py-2 border-t border-white/5 text-[10px] text-glass-muted">
+    <div class="flex items-center justify-center gap-3">
+      <span class="flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-red-500"></span> Critique
+      </span>
+      <span class="flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-amber-500"></span> Attention
+      </span>
+      <span class="flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-green-500"></span> OK
+      </span>
+    </div>
+  </div>
+</div>

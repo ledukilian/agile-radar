@@ -29,7 +29,8 @@
   <!-- Main Content -->
   <main class="w-full flex-1 flex flex-col overflow-hidden">
     <div class="px-3 sm:px-6 lg:px-8 2xl:px-12 py-4 flex flex-col flex-1 overflow-hidden max-w-[2200px] mx-auto w-full">
-      <div class="flex justify-between items-center mb-3 lg:mb-6 shrink-0">
+      <!-- Header avec navigation centrée -->
+      <div class="flex items-center mb-3 lg:mb-6 shrink-0 relative" *ngIf="currentView === 'estimation'">
         <!-- Logo et titre stylisé -->
         <div class="flex items-center gap-3">
           <!-- Icône avec effet glow orange pastel -->
@@ -54,9 +55,51 @@
             </span>
           </div>
         </div>
+
+        <!-- Navigation principale (centrée absolument) -->
+        <nav class="absolute left-1/2 -translate-x-1/2 hidden sm:flex items-center gap-1 glass-card rounded-xl p-1">
+          <button
+            class="nav-btn px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 active"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span class="hidden md:inline">Estimation</span>
+          </button>
+          <button
+            (click)="currentView = 'planning'"
+            class="nav-btn px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+            <span class="hidden md:inline">Planification</span>
+          </button>
+        </nav>
+
+        <!-- Navigation mobile (à droite) -->
+        <div class="flex sm:hidden gap-1 ml-auto">
+          <button
+            class="nav-btn-mobile p-2 rounded-lg transition-all active"
+            title="Estimation"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </button>
+          <button
+            (click)="currentView = 'planning'"
+            class="nav-btn-mobile p-2 rounded-lg transition-all"
+            title="Planification"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+          </button>
+        </div>
         
-<!-- Mobile tabs (visible only when estimation is selected) -->
-        <div class="flex lg:hidden gap-1" *ngIf="selectedEstimation">
+        <!-- Mobile tabs (visible only when estimation is selected in estimation view) -->
+        <div class="hidden lg:hidden gap-1 ml-4" [class.flex]="selectedEstimation">
           <button 
             (click)="mobileTab = 'list'"
             [class.active-tab]="mobileTab === 'list'"
@@ -82,62 +125,12 @@
         </div>
       </div>
 
-      <!-- Desktop Layout (lg+) -->
-      <div class="hidden lg:flex gap-4 xl:gap-6 2xl:gap-10 flex-1 overflow-hidden">
-        <!-- Colonne 1 : Liste des estimations (largeur fixe adaptative) -->
-        <div class="flex flex-col rounded-2xl overflow-hidden w-80 xl:w-96 2xl:w-[26rem] shrink-0">
-          <app-estimation-list
-            class="flex-1 flex flex-col overflow-hidden"
-            [selectedId]="selectedEstimation?.id"
-            (selectEstimation)="onSelectEstimation($event)"
-            (newEstimationCreated)="onNewEstimationCreated($event)"
-          ></app-estimation-list>
-        </div>
-
-        <!-- Colonnes 2 et 3 : Radar + Formulaire/Recommandations (toujours la même largeur) -->
-        <ng-container *ngIf="selectedEstimation">
-          <!-- Colonne 2 : Radar Chart -->
-          <div class="flex flex-col rounded-2xl overflow-hidden flex-1 min-w-0">
-            <app-radar-chart 
-              [estimation]="selectedEstimation"
-              [showEditButton]="!isEditing"
-              [isEditing]="isEditing"
-              (editEstimation)="onStartEditing()"
-              (closeEdit)="onStopEditing()"
-            ></app-radar-chart>
-          </div>
-
-          <!-- Colonne 3 : Formulaire de détails -->
-          <div class="flex flex-col rounded-2xl overflow-hidden flex-1 min-w-0">
-            <app-estimation-form
-              *ngIf="isEditing"
-              class="h-full"
-              [estimation]="selectedEstimation"
-              [compact]="true"
-              (estimationChanged)="onEstimationChanged($event)"
-              (deleteEstimation)="onDeleteEstimation($event)"
-              (closeForm)="onStopEditing()"
-            ></app-estimation-form>
-          </div>
-        </ng-container>
-      </div>
-
-      <!-- Mobile/Tablet Layout (<lg) -->
-      <div class="flex lg:hidden flex-1 overflow-hidden">
-        <!-- Si aucune estimation sélectionnée, on affiche la liste -->
-        <div class="flex flex-col flex-1 overflow-hidden" *ngIf="!selectedEstimation">
-          <app-estimation-list
-            class="flex-1 flex flex-col overflow-hidden"
-            [selectedId]="undefined"
-            (selectEstimation)="onSelectEstimation($event)"
-            (newEstimationCreated)="onNewEstimationCreated($event)"
-          ></app-estimation-list>
-        </div>
-
-        <!-- Si une estimation est sélectionnée, on affiche selon le tab actif -->
-        <ng-container *ngIf="selectedEstimation">
-          <!-- Tab Liste -->
-          <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'list'">
+      <!-- ========== VUE ESTIMATION ========== -->
+      <ng-container *ngIf="currentView === 'estimation'">
+        <!-- Desktop Layout (lg+) -->
+        <div class="hidden lg:flex gap-4 xl:gap-6 2xl:gap-10 flex-1 overflow-hidden">
+          <!-- Colonne 1 : Liste des estimations (largeur fixe adaptative) -->
+          <div class="flex flex-col rounded-2xl overflow-hidden w-80 xl:w-96 2xl:w-[26rem] shrink-0">
             <app-estimation-list
               class="flex-1 flex flex-col overflow-hidden"
               [selectedId]="selectedEstimation?.id"
@@ -146,34 +139,94 @@
             ></app-estimation-list>
           </div>
 
-          <!-- Tab Radar Chart -->
-          <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'chart'">
-            <app-radar-chart 
-              [estimation]="selectedEstimation"
-              [showEditButton]="true"
-              [isEditing]="isEditing"
-              (editEstimation)="onStartEditing()"
-              (closeEdit)="onStopEditing()"
-            ></app-radar-chart>
+          <!-- Colonnes 2 et 3 : Radar + Formulaire/Recommandations (toujours la même largeur) -->
+          <ng-container *ngIf="selectedEstimation">
+            <!-- Colonne 2 : Radar Chart -->
+            <div class="flex flex-col rounded-2xl overflow-hidden flex-1 min-w-0">
+              <app-radar-chart 
+                [estimation]="selectedEstimation"
+                [showEditButton]="!isEditing"
+                [isEditing]="isEditing"
+                (editEstimation)="onStartEditing()"
+                (closeEdit)="onStopEditing()"
+              ></app-radar-chart>
+            </div>
+
+            <!-- Colonne 3 : Formulaire de détails -->
+            <div class="flex flex-col rounded-2xl overflow-hidden flex-1 min-w-0">
+              <app-estimation-form
+                *ngIf="isEditing"
+                class="h-full"
+                [estimation]="selectedEstimation"
+                [compact]="true"
+                (estimationChanged)="onEstimationChanged($event)"
+                (deleteEstimation)="onDeleteEstimation($event)"
+                (closeForm)="onStopEditing()"
+              ></app-estimation-form>
+            </div>
+          </ng-container>
+        </div>
+
+        <!-- Mobile/Tablet Layout (<lg) -->
+        <div class="flex lg:hidden flex-1 overflow-hidden">
+          <!-- Si aucune estimation sélectionnée, on affiche la liste -->
+          <div class="flex flex-col flex-1 overflow-hidden" *ngIf="!selectedEstimation">
+            <app-estimation-list
+              class="flex-1 flex flex-col overflow-hidden"
+              [selectedId]="undefined"
+              (selectEstimation)="onSelectEstimation($event)"
+              (newEstimationCreated)="onNewEstimationCreated($event)"
+            ></app-estimation-list>
           </div>
 
-          <!-- Tab Formulaire (seulement en mode édition) -->
-          <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'form' && isEditing">
-            <app-estimation-form
-              [estimation]="selectedEstimation"
-              [compact]="true"
-              (estimationChanged)="onEstimationChanged($event)"
-              (deleteEstimation)="onDeleteEstimation($event)"
-              (closeForm)="onStopEditing()"
-            ></app-estimation-form>
-          </div>
-        </ng-container>
-      </div>
+          <!-- Si une estimation est sélectionnée, on affiche selon le tab actif -->
+          <ng-container *ngIf="selectedEstimation">
+            <!-- Tab Liste -->
+            <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'list'">
+              <app-estimation-list
+                class="flex-1 flex flex-col overflow-hidden"
+                [selectedId]="selectedEstimation?.id"
+                (selectEstimation)="onSelectEstimation($event)"
+                (newEstimationCreated)="onNewEstimationCreated($event)"
+              ></app-estimation-list>
+            </div>
+
+            <!-- Tab Radar Chart -->
+            <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'chart'">
+              <app-radar-chart 
+                [estimation]="selectedEstimation"
+                [showEditButton]="true"
+                [isEditing]="isEditing"
+                (editEstimation)="onStartEditing()"
+                (closeEdit)="onStopEditing()"
+              ></app-radar-chart>
+            </div>
+
+            <!-- Tab Formulaire (seulement en mode édition) -->
+            <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'form' && isEditing">
+              <app-estimation-form
+                [estimation]="selectedEstimation"
+                [compact]="true"
+                (estimationChanged)="onEstimationChanged($event)"
+                (deleteEstimation)="onDeleteEstimation($event)"
+                (closeForm)="onStopEditing()"
+              ></app-estimation-form>
+            </div>
+          </ng-container>
+        </div>
+      </ng-container>
+
+      <!-- ========== VUE PLANIFICATION ========== -->
+      <app-planning-board 
+        *ngIf="currentView === 'planning'"
+        class="flex-1 overflow-hidden -mx-3 sm:-mx-6 lg:-mx-8 2xl:-mx-12 -mb-4"
+        (navigateToEstimation)="currentView = 'estimation'"
+      ></app-planning-board>
     </div>
   </main>
 
-  <!-- Footer (positionné en dessous du contenu, masqué si recouvert) -->
-  <footer class="absolute bottom-0 left-0 right-0 py-2 px-4 text-center text-gray-400 text-xs z-0">
+  <!-- Footer (masqué en mode planification) -->
+  <footer *ngIf="currentView === 'estimation'" class="absolute bottom-0 left-0 right-0 py-2 px-4 text-center text-gray-400 text-xs z-0">
     <span class="hidden sm:inline">v{{ appVersion }} • <a href="https://github.com/ledukilian/agile-radar" target="_blank" rel="noopener noreferrer" class="hover:text-glass-secondary underline">GitHub</a> • Made with ❤️ by <a href="https://ledukilian.fr" target="_blank" rel="noopener noreferrer" class="hover:text-glass-secondary underline">Kilian LE DU</a></span>
     <span class="sm:hidden">v{{ appVersion }} • <a href="https://github.com/ledukilian/agile-radar" target="_blank" rel="noopener noreferrer" class="hover:text-glass-secondary underline">GitHub</a></span>
   </footer>

@@ -16,3 +16,37 @@
     font-weight: 600;
   }
 }
+
+// Navigation principale
+.nav-btn {
+  color: var(--text-secondary);
+  
+  &:hover {
+    background: var(--list-hover-bg);
+    color: var(--text-primary);
+  }
+  
+  &.active {
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%);
+    color: #f59e0b;
+    box-shadow: 0 0 20px rgba(251, 146, 60, 0.15);
+  }
+}
+
+.nav-btn-mobile {
+  color: var(--text-secondary);
+  background: var(--inner-bg);
+  border: 1px solid var(--inner-border);
+  
+  &:hover {
+    background: var(--list-hover-bg);
+    border-color: var(--list-hover-border);
+    color: var(--text-primary);
+  }
+  
+  &.active {
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%);
+    border-color: rgba(251, 146, 60, 0.4);
+    color: #f59e0b;
+  }
+}

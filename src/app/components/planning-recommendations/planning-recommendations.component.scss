@@ -1,0 +1,41 @@
+.recommendations {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  
+  // Désactiver la sélection de texte
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.recommendation-card {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateX(-2px);
+  }
+}
+
+.section-label {
+  position: sticky;
+  top: 0;
+  background: var(--card-bg);
+  z-index: 1;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+// Scrollbar
+.recommendations > div:nth-child(2) {
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 2px;
+  }
+}

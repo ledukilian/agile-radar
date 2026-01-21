@@ -1,0 +1,223 @@
+<div class="planning-board-container h-full relative">
+  <!-- Canvas de planification (plein écran) -->
+  <div
+    #boardContainer
+    class="board-canvas absolute inset-0"
+    [class.creating-dependency]="isCreatingDependency"
+    (mousedown)="onPanStart($event)"
+    (mousemove)="onPanMove($event)"
+    (mouseup)="onPanEnd($event)"
+    (mouseleave)="onPanEnd($event)"
+  >
+    <!-- Grille de fond -->
+    <div 
+      class="absolute inset-0 pointer-events-none grid-background"
+      [ngStyle]="gridStyle"
+    ></div>
+
+    <!-- Canvas transformé -->
+    <div
+      #canvas
+      class="canvas-content absolute"
+      [ngStyle]="canvasStyle"
+    >
+      <!-- Lignes de dépendances (SVG en fond) -->
+      <svg class="dependencies-layer absolute inset-0 w-full h-full pointer-events-none" style="overflow: visible;">
+        <g app-dependency-line
+          *ngFor="let dep of board.dependencies; trackBy: trackByDependency"
+          [dependency]="dep"
+          [sourcePosition]="getItemPosition(dep.sourceId)"
+          [targetPosition]="getItemPosition(dep.targetId)"
+          [isResolved]="planningService.isDependencyResolved(dep)"
+          (delete)="onDependencyDeleted(dep.id)"
+          (update)="onDependencyUpdated(dep.id, $any($event))"
+        ></g>
+      </svg>
+
+      <!-- Sprints -->
+      <app-sprint-card
+        *ngFor="let sprint of board.sprints; trackBy: trackBySprint"
+        [sprint]="sprint"
+        [sprintInfo]="getSprintInfo(sprint.id)"
+        [items]="getItemsInSprint(sprint.id)"
+        [isCreatingDependency]="isCreatingDependency"
+        [dependencySource]="dependencySource"
+        (moved)="onSprintMoved(sprint.id, $event)"
+        (resized)="onSprintResized(sprint.id, $event)"
+        (updated)="onSprintUpdated(sprint.id, $event)"
+        (deleted)="onSprintDeleted(sprint.id)"
+        (itemMoved)="onItemMoved($event.id, $event.position)"
+        (itemRemoved)="onItemRemovedFromSprint($event)"
+        (itemDropped)="onItemDroppedOnSprint($event, sprint.id)"
+        (startDependency)="startCreatingDependency($event)"
+        (selectDependencyTarget)="onDependencyTargetSelected($event)"
+      ></app-sprint-card>
+
+      <!-- Items hors sprints -->
+      <app-planning-item-card
+        *ngFor="let item of getItemsOutsideSprints(); trackBy: trackByPosition"
+        [estimation]="item.estimation"
+        [position]="item.position.position"
+        [isCreatingDependency]="isCreatingDependency"
+        [isSelected]="dependencySource === item.estimation.id"
+        (moved)="onItemMoved(item.estimation.id, $event)"
+        (removed)="onItemRemovedFromBoard(item.estimation.id)"
+        (startDependency)="startCreatingDependency($event)"
+        (selectAsTarget)="onDependencyTargetSelected($event)"
+      ></app-planning-item-card>
+    </div>
+
+    <!-- Message si vide -->
+    <div 
+      *ngIf="board.sprints.length === 0 && board.positions.length === 0"
+      class="empty-state absolute inset-0 flex items-center justify-center pointer-events-none"
+    >
+      <div class="text-center max-w-md px-8">
+        <div class="text-6xl mb-4">📋</div>
+        <h3 class="text-xl font-semibold text-glass-primary mb-2">Board vide</h3>
+        <p class="text-glass-muted text-sm">
+          Commencez par créer un sprint ou glissez des éléments depuis la sidebar.
+        </p>
+      </div>
+    </div>
+
+    <!-- Indicateur mode dépendance -->
+    <div 
+      *ngIf="isCreatingDependency"
+      class="mode-indicator absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg flex items-center gap-2 z-50"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+      </svg>
+      Cliquez sur l'élément cible de la dépendance
+      <button (click)="cancelCreatingDependency()" class="ml-2 hover:bg-amber-600 p-1 rounded">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Navigation flottante (en haut au centre) -->
+  <nav class="floating-nav absolute top-4 left-1/2 -translate-x-1/2 z-30 hidden sm:flex items-center gap-1 glass-card rounded-xl p-1 shadow-lg">
+    <button
+      (click)="goToEstimation()"
+      class="nav-btn px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      <span class="hidden md:inline">Estimation</span>
+    </button>
+    <button
+      class="nav-btn px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 active"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+      </svg>
+      <span class="hidden md:inline">Planification</span>
+    </button>
+  </nav>
+
+  <!-- Sidebar gauche (flottante) -->
+  <app-planning-sidebar
+    *ngIf="showSidebar"
+    class="floating-sidebar absolute left-4 top-20 bottom-20 z-20 shadow-xl rounded-xl overflow-hidden"
+    [isCreatingDependency]="isCreatingDependency"
+    (itemDropped)="onItemAddedToBoard($event.estimationId, $event.position)"
+  ></app-planning-sidebar>
+
+  <!-- Panel recommandations (flottant à droite) -->
+  <app-planning-recommendations
+    *ngIf="showRecommendations"
+    class="floating-recommendations absolute right-4 top-20 bottom-20 z-20 shadow-xl rounded-xl overflow-hidden"
+    (close)="showRecommendations = false"
+  ></app-planning-recommendations>
+
+  <!-- Toolbar en bas (style footer) -->
+  <div class="toolbar-bottom absolute bottom-0 left-0 right-0 z-30 flex items-center justify-center py-3 px-4">
+    <div class="toolbar glass-card flex items-center gap-2 px-4 py-2 rounded-xl shadow-lg">
+      <!-- Toggle Sidebar -->
+      <button
+        (click)="toggleSidebar()"
+        class="toolbar-btn"
+        [class.active]="showSidebar"
+        title="Afficher/Masquer le backlog"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+        </svg>
+      </button>
+
+      <!-- Séparateur -->
+      <div class="w-px h-6 bg-white/20 mx-1"></div>
+
+      <!-- Créer Sprint -->
+      <button
+        (click)="createQuickSprint()"
+        class="toolbar-btn flex items-center gap-1.5"
+        title="Créer un sprint"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+        <span class="text-sm hidden sm:inline">Sprint</span>
+      </button>
+
+      <!-- Séparateur -->
+      <div class="w-px h-6 bg-white/20 mx-1"></div>
+
+      <!-- Toggle Grille -->
+      <button
+        (click)="toggleGrid()"
+        class="toolbar-btn"
+        [class.active]="board.gridEnabled"
+        title="Activer/Désactiver la grille"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+        </svg>
+      </button>
+
+      <!-- Séparateur -->
+      <div class="w-px h-6 bg-white/20 mx-1"></div>
+
+      <!-- Zoom controls -->
+      <button (click)="zoomOut()" class="toolbar-btn" title="Zoom arrière">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+        </svg>
+      </button>
+      
+      <button 
+        (click)="resetZoom()" 
+        class="toolbar-btn px-2 min-w-[60px] text-center"
+        title="Réinitialiser le zoom"
+      >
+        <span class="text-sm font-medium">{{ (board.zoom * 100) | number:'1.0-0' }}%</span>
+      </button>
+      
+      <button (click)="zoomIn()" class="toolbar-btn" title="Zoom avant">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+        </svg>
+      </button>
+
+      <!-- Séparateur -->
+      <div class="w-px h-6 bg-white/20 mx-1"></div>
+
+      <!-- Toggle Recommandations -->
+      <button
+        (click)="toggleRecommendations()"
+        class="toolbar-btn flex items-center gap-1.5"
+        [class.active]="showRecommendations"
+        title="Afficher/Masquer les conseils"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+        <span class="text-sm hidden sm:inline">Conseils</span>
+      </button>
+    </div>
+  </div>
+</div>

@@ -5,6 +5,7 @@ import { Estimation, DimensionWeights, TShirtSize, TShirtSizesConfig } from './m
 import { EstimationFormComponent } from './components/estimation-form/estimation-form.component';
 import { RadarChartComponent } from './components/radar-chart/radar-chart.component';
 import { EstimationListComponent } from './components/estimation-list/estimation-list.component';
+import { PlanningBoardComponent } from './components/planning-board/planning-board.component';
 import { EstimationService } from './services/estimation.service';
 import { SettingsService } from './services/settings.service';
 import { TourService } from './services/tour.service';
@@ -18,7 +19,8 @@ import { environment } from '../environments/environment';
     FormsModule,
     EstimationFormComponent,
     RadarChartComponent,
-    EstimationListComponent
+    EstimationListComponent,
+    PlanningBoardComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -29,6 +31,9 @@ export class AppComponent implements OnInit, AfterViewInit {
   isDarkMode = false;
   isEditing = false;
   mobileTab: 'list' | 'chart' | 'form' = 'list';
+  
+  // Navigation principale
+  currentView: 'estimation' | 'planning' = 'estimation';
   
   // Paramètres
   showSettingsModal = false;

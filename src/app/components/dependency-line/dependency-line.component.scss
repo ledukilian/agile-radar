@@ -1,0 +1,63 @@
+.dependency-line-group {
+  pointer-events: auto;
+}
+
+.dependency-hitbox {
+  cursor: pointer;
+  
+  &:hover + .dependency-path {
+    stroke-width: 3;
+  }
+}
+
+.dependency-path {
+  transition: stroke-width 0.2s ease;
+  
+  &.unresolved {
+    animation: dash-animate 1s linear infinite;
+  }
+}
+
+@keyframes dash-animate {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.dependency-arrow {
+  transition: transform 0.2s ease;
+}
+
+.dependency-label {
+  cursor: pointer;
+  
+  .label-bg {
+    transition: all 0.2s ease;
+  }
+  
+  &:hover .label-bg {
+    transform: scale(1.1);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+  }
+}
+
+.dependency-tooltip {
+  max-width: 280px;
+  animation: tooltip-appear 0.2s ease-out;
+}
+
+@keyframes tooltip-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Fix pour le foreignObject dans SVG
+.tooltip-container {
+  overflow: visible;
+}

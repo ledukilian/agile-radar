@@ -1,0 +1,145 @@
+.planning-board-container {
+  --grid-color: rgba(99, 102, 241, 0.08);
+  
+  // Désactiver la sélection de texte pour éviter les problèmes de drag
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+:host-context(.light-mode) .planning-board-container {
+  --grid-color: rgba(251, 146, 60, 0.1);
+}
+
+.board-canvas {
+  background: var(--card-bg);
+  cursor: grab;
+  
+  &:active {
+    cursor: grabbing;
+  }
+  
+  &.creating-dependency {
+    cursor: pointer;
+  }
+}
+
+.grid-background {
+  opacity: 0.5;
+}
+
+.canvas-content {
+  width: 10000px;
+  height: 10000px;
+  position: relative;
+}
+
+.dependencies-layer {
+  z-index: 1;
+}
+
+.empty-state {
+  z-index: 0;
+}
+
+.mode-indicator {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+// Navigation flottante
+.floating-nav {
+  backdrop-filter: blur(16px);
+}
+
+.nav-btn {
+  color: var(--text-secondary);
+  
+  &:hover {
+    background: var(--list-hover-bg);
+    color: var(--text-primary);
+  }
+  
+  &.active {
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%);
+    color: #f59e0b;
+    box-shadow: 0 0 20px rgba(251, 146, 60, 0.15);
+  }
+}
+
+// Sidebar flottante
+.floating-sidebar {
+  width: 280px;
+  max-height: calc(100% - 10rem);
+}
+
+// Recommandations flottantes
+.floating-recommendations {
+  width: 300px;
+  max-height: calc(100% - 10rem);
+}
+
+// Toolbar en bas
+.toolbar-bottom {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.3) 0%, transparent 100%);
+  pointer-events: none;
+  
+  .toolbar {
+    pointer-events: all;
+  }
+}
+
+.toolbar {
+  border: 1px solid var(--card-border);
+  backdrop-filter: blur(16px);
+}
+
+.toolbar-btn {
+  @apply p-2 rounded-lg transition-all duration-200;
+  color: var(--text-secondary);
+  
+  &:hover {
+    background: var(--list-hover-bg);
+    color: var(--text-primary);
+  }
+  
+  &.active {
+    background: var(--list-selected-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--list-selected-border);
+  }
+}
+
+// Animation pour les items draggables
+:host ::ng-deep .planning-item {
+  transition: box-shadow 0.2s ease, transform 0.1s ease;
+  
+  &:hover {
+    z-index: 10;
+  }
+  
+  &.dragging {
+    z-index: 1000;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    transform: scale(1.02);
+  }
+}
+
+:host ::ng-deep .sprint-card {
+  z-index: 5;
+  
+  &.dragging {
+    z-index: 100;
+  }
+}

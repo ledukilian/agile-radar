@@ -1,0 +1,228 @@
+<div
+  #sprintElement
+  class="sprint-card absolute glass-card rounded-xl overflow-hidden"
+  [class]="statusClass"
+  [style.left.px]="sprint.position.x"
+  [style.top.px]="sprint.position.y"
+  [style.width.px]="sprint.width"
+  [style.height.px]="sprint.height"
+>
+  <!-- Header -->
+  <div class="sprint-header px-3 py-2 cursor-move flex items-center justify-between border-b border-white/10">
+    <div class="flex items-center gap-2 flex-1 min-w-0">
+      <!-- Icône sprint -->
+      <span class="text-lg shrink-0">🏁</span>
+      
+      <!-- Nom (éditable) -->
+      <ng-container *ngIf="!isEditing">
+        <h3 class="font-semibold text-glass-primary truncate text-sm">{{ sprint.name }}</h3>
+        <button 
+          (click)="startEditing()" 
+          class="p-1 text-glass-muted hover:text-glass-secondary transition-colors shrink-0"
+          title="Modifier"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </button>
+      </ng-container>
+      
+      <ng-container *ngIf="isEditing">
+        <input
+          type="text"
+          [(ngModel)]="editName"
+          class="flex-1 min-w-0 px-2 py-0.5 text-sm bg-white/10 border border-white/20 rounded focus:outline-none focus:border-blue-400 text-glass-primary"
+          (keyup.enter)="saveEditing()"
+          (keyup.escape)="cancelEditing()"
+          autofocus
+        />
+      </ng-container>
+    </div>
+
+    <div class="flex items-center gap-1 shrink-0">
+      <!-- Badge status -->
+      <span 
+        *ngIf="sprintInfo && sprintInfo.status !== 'empty'"
+        class="status-badge text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+        [ngClass]="{
+          'status-overloaded-badge': sprintInfo.status === 'overloaded',
+          'status-warning-badge': sprintInfo.status === 'at-risk' || sprintInfo.status === 'warning',
+          'status-balanced-badge': sprintInfo.status === 'balanced'
+        }"
+      >
+        {{ statusLabel }}
+      </span>
+
+      <!-- Boutons édition -->
+      <ng-container *ngIf="isEditing">
+        <button 
+          (click)="saveEditing()" 
+          class="p-1 text-green-400 hover:text-green-300 transition-colors"
+          title="Enregistrer"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </button>
+        <button 
+          (click)="cancelEditing()" 
+          class="p-1 text-red-400 hover:text-red-300 transition-colors"
+          title="Annuler"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </ng-container>
+
+      <!-- Menu settings -->
+      <div class="relative" *ngIf="!isEditing">
+        <button 
+          (click)="toggleSettings()" 
+          class="p-1 text-glass-muted hover:text-glass-secondary transition-colors"
+          title="Paramètres"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+          </svg>
+        </button>
+        
+        <!-- Overlay pour fermer le menu (dans le même contexte de stacking) -->
+        <div 
+          *ngIf="showSettings"
+          class="fixed inset-0"
+          style="z-index: 9998;"
+          (click)="showSettings = false"
+        ></div>
+        
+        <!-- Dropdown menu -->
+        <div 
+          *ngIf="showSettings"
+          class="dropdown-menu absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1"
+          style="z-index: 9999;"
+          (mousedown)="$event.stopPropagation()"
+          (click)="$event.stopPropagation()"
+        >
+          <div class="px-3 py-2 border-b border-gray-200">
+            <label class="text-xs text-gray-500">Capacité max (points)</label>
+            <input
+              type="number"
+              [(ngModel)]="editCapacity"
+              (change)="updated.emit({ capacity: editCapacity || undefined })"
+              class="w-full mt-1 px-2 py-1 text-sm text-gray-800 bg-gray-100 border border-gray-300 rounded focus:outline-none focus:border-blue-400"
+              min="0"
+              placeholder="Non définie"
+            />
+            <p class="text-[10px] text-gray-400 mt-1">Laisser vide = illimitée</p>
+          </div>
+          <div class="px-3 py-2 border-b border-gray-200">
+            <label class="text-xs text-gray-500">Date début</label>
+            <input
+              type="date"
+              [value]="sprint.startDate || ''"
+              (change)="updateDates($any($event.target).value, sprint.endDate || '')"
+              class="w-full mt-1 px-2 py-1 text-sm text-gray-800 bg-gray-100 border border-gray-300 rounded focus:outline-none focus:border-blue-400"
+            />
+          </div>
+          <div class="px-3 py-2 border-b border-gray-200">
+            <label class="text-xs text-gray-500">Date fin</label>
+            <input
+              type="date"
+              [value]="sprint.endDate || ''"
+              (change)="updateDates(sprint.startDate || '', $any($event.target).value)"
+              class="w-full mt-1 px-2 py-1 text-sm text-gray-800 bg-gray-100 border border-gray-300 rounded focus:outline-none focus:border-blue-400"
+            />
+          </div>
+          <button
+            (click)="confirmDelete(); showSettings = false"
+            class="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barre de charge (seulement si capacité définie) -->
+  <div class="load-bar h-1.5 bg-black/20" *ngIf="sprint.capacity">
+    <div 
+      class="h-full transition-all duration-300"
+      [class]="loadBarClass"
+      [style.width.%]="loadBarWidth"
+    ></div>
+  </div>
+
+  <!-- Infos sprint -->
+  <div class="sprint-info px-3 py-1.5 flex items-center justify-between text-xs border-b border-white/5">
+    <div class="flex items-center gap-3 text-glass-muted">
+      <span *ngIf="sprint.startDate || sprint.endDate" class="flex items-center gap-1">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <span *ngIf="sprint.startDate">{{ sprint.startDate }}</span>
+        <span *ngIf="sprint.startDate && sprint.endDate">→</span>
+        <span *ngIf="sprint.endDate">{{ sprint.endDate }}</span>
+      </span>
+    </div>
+    <div class="flex items-center gap-3">
+      <!-- Compteur points -->
+      <span 
+        class="font-medium"
+        [class.text-red-400]="sprint.capacity && sprintInfo && sprintInfo.loadPercentage > 100"
+        [class.text-amber-400]="sprint.capacity && sprintInfo && sprintInfo.loadPercentage > 85 && sprintInfo.loadPercentage <= 100"
+        [class.text-green-400]="sprint.capacity && sprintInfo && sprintInfo.loadPercentage <= 85"
+      >
+        {{ sprintInfo?.usedPoints || 0 }}<span *ngIf="sprint.capacity"> / {{ sprint.capacity }}</span> pts
+      </span>
+      <!-- Compteur dépendances -->
+      <span 
+        *ngIf="sprintInfo && sprintInfo.unresolvedDependencies > 0"
+        class="flex items-center gap-1 text-amber-400"
+        title="Dépendances non résolues"
+      >
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+        </svg>
+        {{ sprintInfo.unresolvedDependencies }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Zone de contenu (items) -->
+  <div class="sprint-content flex-1 p-2">
+    <div class="items-grid">
+      <app-planning-item-card
+        *ngFor="let item of items; trackBy: trackByItem"
+        [estimation]="item"
+        [compact]="true"
+        [inSprint]="true"
+        [isCreatingDependency]="isCreatingDependency"
+        [isSelected]="dependencySource === item.id"
+        (removed)="onItemRemoved(item.id)"
+        (startDependency)="onStartDependency($event)"
+        (selectAsTarget)="onSelectAsTarget($event)"
+      ></app-planning-item-card>
+    </div>
+
+    <!-- Message si vide -->
+    <div 
+      *ngIf="items.length === 0"
+      class="empty-sprint h-full flex items-center justify-center text-glass-muted text-sm"
+    >
+      <div class="text-center">
+        <span>Glissez des éléments ici</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Handle de redimensionnement -->
+  <div class="resize-handle absolute bottom-0 right-0 w-4 h-4 cursor-se-resize opacity-50 hover:opacity-100 transition-opacity">
+    <svg class="w-full h-full text-glass-muted" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M22 22H20V20H22V22ZM22 18H20V16H22V18ZM18 22H16V20H18V22ZM22 14H20V12H22V14ZM18 18H16V16H18V18ZM14 22H12V20H14V22Z" />
+    </svg>
+  </div>
+</div>

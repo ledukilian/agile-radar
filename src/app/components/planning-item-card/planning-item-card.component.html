@@ -1,0 +1,229 @@
+<div
+  #itemElement
+  class="planning-item glass-list-item rounded-lg cursor-grab transition-all"
+  [class.compact]="compact"
+  [class.in-sprint]="inSprint"
+  [class.selected]="isSelected"
+  [class.target-mode]="isCreatingDependency && !isSelected"
+  [class]="overallIndicatorClass"
+  [style.left.px]="position?.x"
+  [style.top.px]="position?.y"
+  [attr.data-estimation-id]="estimation.id"
+  (click)="onClick()"
+>
+  <!-- Version compacte (dans un sprint) - Style post-it mini -->
+  <ng-container *ngIf="compact">
+    <div class="postit-compact p-2">
+      <!-- Header avec type et menu -->
+      <div class="flex items-start justify-between gap-1 mb-1">
+        <span class="text-base">{{ typeIcon }}</span>
+        
+        <!-- Menu -->
+        <div class="item-menu relative">
+          <button 
+            (click)="toggleMenu($event)"
+            (mousedown)="$event.stopPropagation()"
+            class="p-1 text-glass-muted hover:text-glass-secondary transition-colors rounded hover:bg-white/10"
+            data-no-drag
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+            </svg>
+          </button>
+          
+          <!-- Overlay pour fermer le menu -->
+          <div 
+            *ngIf="showMenu"
+            class="fixed inset-0"
+            style="z-index: 9998;"
+            (click)="showMenu = false"
+          ></div>
+          
+          <!-- Dropdown menu -->
+          <div 
+            *ngIf="showMenu"
+            class="dropdown-menu absolute right-0 top-full mt-1 w-36 bg-white rounded-lg shadow-xl border border-gray-200 py-1"
+            style="z-index: 9999;"
+            (mousedown)="$event.stopPropagation()"
+            (click)="$event.stopPropagation()"
+            data-no-drag
+          >
+            <button
+              (click)="onStartDependency($event)"
+              class="w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            >
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              Dépendance
+            </button>
+            <button
+              (click)="onRemove($event)"
+              class="w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2"
+            >
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Retirer
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Nom -->
+      <p class="text-xs font-medium text-glass-primary line-clamp-2 mb-2 leading-tight">
+        {{ estimation.name }}
+      </p>
+      
+      <!-- Footer avec points et indicateur -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1">
+          <span 
+            *ngIf="tShirtSize"
+            class="text-[10px] font-bold px-1.5 py-0.5 rounded"
+            [ngClass]="[tShirtSize.bgColor, tShirtSize.textColor]"
+          >
+            {{ tShirtSize.size }}
+          </span>
+          <span class="text-[10px] text-glass-muted">{{ points }}pts</span>
+        </div>
+        <div class="curse-indicator w-2 h-2 rounded-full" [class]="overallIndicatorClass"></div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Version normale (hors sprint) - Style post-it -->
+  <ng-container *ngIf="!compact">
+    <div class="postit p-3">
+      <!-- Header avec type et menu -->
+      <div class="flex items-start justify-between gap-2 mb-2">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">{{ typeIcon }}</span>
+          <span class="text-[10px] text-glass-muted uppercase font-medium tracking-wide">{{ typeLabel }}</span>
+        </div>
+        
+        <!-- Menu -->
+        <div class="item-menu relative">
+          <button 
+            (click)="toggleMenu($event)"
+            (mousedown)="$event.stopPropagation()"
+            class="p-1.5 text-glass-muted hover:text-glass-secondary transition-colors rounded hover:bg-white/10"
+            data-no-drag
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+            </svg>
+          </button>
+          
+          <!-- Overlay pour fermer le menu -->
+          <div 
+            *ngIf="showMenu"
+            class="fixed inset-0"
+            style="z-index: 9998;"
+            (click)="showMenu = false"
+          ></div>
+          
+          <!-- Dropdown menu -->
+          <div 
+            *ngIf="showMenu"
+            class="dropdown-menu absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1"
+            style="z-index: 9999;"
+            (mousedown)="$event.stopPropagation()"
+            (click)="$event.stopPropagation()"
+            data-no-drag
+          >
+            <button
+              (click)="onStartDependency($event)"
+              class="w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              Créer dépendance
+            </button>
+            <button
+              (click)="onRemove($event)"
+              class="w-full px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Retirer du board
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nom -->
+      <h4 class="text-sm font-semibold text-glass-primary line-clamp-3 mb-3 leading-snug">
+        {{ estimation.name }}
+      </h4>
+
+      <!-- Points et T-shirt -->
+      <div class="flex items-center gap-2 mb-3">
+        <span 
+          *ngIf="tShirtSize"
+          class="text-xs font-bold px-2 py-1 rounded"
+          [ngClass]="[tShirtSize.bgColor, tShirtSize.textColor]"
+        >
+          {{ tShirtSize.size }}
+        </span>
+        <span class="text-sm font-medium text-glass-secondary">{{ points }} pts</span>
+      </div>
+      
+      <!-- Indicateurs CURSE en barres -->
+      <div class="curse-bars flex flex-col gap-1">
+        <div class="flex items-center gap-2">
+          <span class="text-[9px] text-glass-muted w-4 text-center" title="Complexité">C</span>
+          <div class="flex-1 h-1.5 bg-black/10 rounded-full overflow-hidden">
+            <div 
+              class="h-full rounded-full transition-all"
+              [class]="getCurseIndicatorClass(estimation.complexity)"
+              [style.width.%]="estimation.complexity"
+            ></div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[9px] text-glass-muted w-4 text-center" title="Incertitude">U</span>
+          <div class="flex-1 h-1.5 bg-black/10 rounded-full overflow-hidden">
+            <div 
+              class="h-full rounded-full transition-all"
+              [class]="getCurseIndicatorClass(estimation.uncertainty)"
+              [style.width.%]="estimation.uncertainty"
+            ></div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[9px] text-glass-muted w-4 text-center" title="Risque">R</span>
+          <div class="flex-1 h-1.5 bg-black/10 rounded-full overflow-hidden">
+            <div 
+              class="h-full rounded-full transition-all"
+              [class]="getCurseIndicatorClass(estimation.risk)"
+              [style.width.%]="estimation.risk"
+            ></div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[9px] text-glass-muted w-4 text-center" title="Taille">S</span>
+          <div class="flex-1 h-1.5 bg-black/10 rounded-full overflow-hidden">
+            <div 
+              class="h-full rounded-full transition-all"
+              [class]="getCurseIndicatorClass(estimation.size)"
+              [style.width.%]="estimation.size"
+            ></div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[9px] text-glass-muted w-4 text-center" title="Effort">E</span>
+          <div class="flex-1 h-1.5 bg-black/10 rounded-full overflow-hidden">
+            <div 
+              class="h-full rounded-full transition-all"
+              [class]="getCurseIndicatorClass(estimation.effort)"
+              [style.width.%]="estimation.effort"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>
