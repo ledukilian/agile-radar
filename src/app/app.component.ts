@@ -72,6 +72,14 @@ export class AppComponent implements OnInit, AfterViewInit {
         this.tourService.startTour();
       }
     }, 500);
+
+    // Écouter l'événement de création d'estimation depuis le tour
+    document.addEventListener('tour-estimation-created', ((event: CustomEvent) => {
+      const estimation = event.detail.estimation;
+      if (estimation) {
+        this.onNewEstimationCreated(estimation);
+      }
+    }) as EventListener);
   }
 
   /**

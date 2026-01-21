@@ -26,10 +26,26 @@ body.tour-active .app-background {
 .shepherd-element {
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border: 1px solid rgba(99, 102, 241, 0.25);
-  border-radius: 16px;
   box-shadow: 
     0 25px 50px -12px rgba(0, 0, 0, 0.15),
     0 0 40px rgba(99, 102, 241, 0.1);
+}
+
+/* Espacement supplémentaire selon la position de la modale */
+.shepherd-element[data-popper-placement^="top"] {
+  margin-bottom: 24px !important;
+}
+
+.shepherd-element[data-popper-placement^="bottom"] {
+  margin-top: 24px !important;
+}
+
+.shepherd-element[data-popper-placement^="left"] {
+  margin-right: 24px !important;
+}
+
+.shepherd-element[data-popper-placement^="right"] {
+  margin-left: 24px !important;
 }
 
 .shepherd-arrow::before {
@@ -131,7 +147,11 @@ body.tour-active .app-background {
 
 /* Modal overlay */
 .shepherd-modal-overlay-container {
-  fill: rgba(0, 0, 0, 0.5);
+  fill: rgba(0, 0, 0, 0.75);
+  
+  svg {
+    fill: rgba(0, 0, 0, 0.75);
+  }
 }
 
 /* Animation d'entrée - simple fade sans déplacement */

@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import Shepherd from 'shepherd.js';
+import { EstimationService } from './estimation.service';
 
 export interface TourStep {
   id: string;
@@ -23,6 +24,8 @@ export class TourService {
   private tour: Shepherd.Tour | null = null;
   private readonly TOUR_COMPLETED_KEY = 'agile-radar-tour-completed';
   private radarObserver: MutationObserver | null = null;
+
+  constructor(private estimationService: EstimationService) {}
 
   /**
    * Vérifie si le tour a déjà été complété
@@ -78,6 +81,24 @@ export class TourService {
    * Initialise et lance le tour après stabilisation du layout
    */
   private initAndStartTour(): void {
+    // Créer automatiquement une estimation pour le tour si aucune n'existe
+    const existingEstimations = this.estimationService.getAllEstimations();
+    if (existingEstimations.length === 0) {
+      this.createEstimationForTour();
+      // Attendre que l'estimation soit créée, sélectionnée et que le DOM soit mis à jour
+      // On attend un peu plus pour que le radar soit rendu
+      setTimeout(() => {
+        this.startTourInternal();
+      }, 500);
+    } else {
+      this.startTourInternal();
+    }
+  }
+
+  /**
+   * Démarre le tour interne
+   */
+  private startTourInternal(): void {
     this.tour = new Shepherd.Tour({
       useModalOverlay: true,
       defaultStepOptions: {
@@ -86,7 +107,7 @@ export class TourService {
         },
         classes: 'shepherd-theme-custom',
         scrollTo: { behavior: 'smooth', block: 'center' },
-        modalOverlayOpeningPadding: 8,
+        modalOverlayOpeningPadding: 20,
         modalOverlayOpeningRadius: 8
       }
     });
@@ -131,7 +152,7 @@ export class TourService {
     // Étape 1 : Bienvenue
     this.tour.addStep({
       id: 'welcome',
-      title: '👋 Bienvenue sur Agile Radar !',
+      title: '📡 Bienvenue sur Agile Radar !',
       text: `
         <p>Cet outil vous aide à <strong>estimer la complexité</strong> de vos User Stories et Features en utilisant la méthode <strong>CURSE</strong>.</p>
         <p class="mt-2 text-sm" style="color: #94a3b8;"><strong>C</strong>omplexity • <strong>U</strong>ncertainty • <strong>R</strong>isk • <strong>S</strong>ize • <strong>E</strong>ffort</p>
@@ -153,7 +174,7 @@ export class TourService {
     // Étape 2 : Liste des estimations
     this.tour.addStep({
       id: 'estimation-list',
-      title: '📋 Liste des estimations',
+      title: 'Liste des estimations',
       text: `
         <p>Ici s'affichent toutes vos <strong>estimations</strong> organisées par type :</p>
         <ul class="mt-2 text-sm" style="list-style: none; padding: 0;">
@@ -162,12 +183,12 @@ export class TourService {
         </ul>
       `,
       attachTo: {
-        element: 'app-estimation-list .glass-card > .space-y-2',
+        element: 'app-estimation-list .glass-card',
         on: 'right'
       },
       buttons: [
         {
-          text: '← Retour',
+          text: 'Retour',
           action: this.tour.back,
           classes: 'shepherd-button-secondary'
         },
@@ -197,7 +218,7 @@ export class TourService {
       },
       buttons: [
         {
-          text: '← Retour',
+          text: 'Retour',
           action: this.tour.back,
           classes: 'shepherd-button-secondary'
         },
@@ -212,18 +233,15 @@ export class TourService {
     // Étape 4 : Gestion des données (export/import)
     this.tour.addStep({
       id: 'data-management',
-      title: '🔐 Vos données',
+      title: 'Vos données',
       text: `
-        <p>Vos estimations sont <strong>100% privées</strong> et stockées <strong>uniquement dans votre navigateur</strong>.</p>
-        <p class="mt-2" style="padding: 0.5rem; background: #ecfdf5; border-radius: 0.5rem; color: #065f46; font-size: 0.85rem;">
-          🔒 Aucune donnée n'est envoyée sur un serveur externe.
-        </p>
+        <p>🔒 Vos estimations sont <strong>100% privées</strong> et stockées <strong>uniquement dans votre navigateur</strong>.</p>
         <p class="mt-2">Vous pouvez :</p>
         <ul class="mt-1 text-sm" style="list-style: none; padding: 0;">
-          <li style="margin-bottom: 0.25rem;">📤 <strong>Exporter</strong> vos données en JSON</li>
-          <li style="margin-bottom: 0.25rem;">📥 <strong>Importer</strong> des données existantes</li>
-          <li>🤝 <strong>Partager</strong> avec votre équipe</li>
+          <li style="margin-bottom: 0.25rem;"><strong>Exporter</strong> vos données en JSON</li>
+          <li style="margin-bottom: 0.25rem;"><strong>Importer</strong> des données existantes</li>
         </ul>
+        <p class="mt-2">💡 Chaque estimation est unique. L'import fusionne les nouvelles estimations avec les existantes sans les écraser.</p>
       `,
       attachTo: {
         element: 'app-estimation-list .glass-card > .mt-4',
@@ -231,7 +249,7 @@ export class TourService {
       },
       buttons: [
         {
-          text: '← Retour',
+          text: 'Retour',
           action: this.tour.back,
           classes: 'shepherd-button-secondary'
         },
@@ -243,20 +261,18 @@ export class TourService {
       ]
     });
 
-    // Étape 5 : Bouton Ajouter - avec instruction pour créer une estimation
+    // Étape 5 : Bouton Ajouter - information sur la création d'estimations
     this.tour.addStep({
       id: 'add-button',
-      title: '➕ Créer une estimation',
+      title: 'Créer une estimation',
       text: `
-        <p>Cliquez sur <strong>"Ajouter"</strong> pour créer votre première estimation.</p>
-        <p class="mt-2" style="color: #64748b;">Choisissez entre :</p>
+        <p>Une estimation a été créée automatiquement pour vous permettre de découvrir l'outil !</p>
+        <p class="mt-2" style="color: #64748b;">Vous pouvez créer d'autres estimations en cliquant sur <strong>"Ajouter"</strong>.</p>
+        <p class="mt-2 text-sm" style="color: #64748b;">Il existe plusieurs types d'estimations :</p>
         <ul class="mt-1 text-sm" style="list-style: none; padding: 0;">
           <li>🧩 <strong>User Story</strong> : tâche individuelle</li>
           <li>⭐ <strong>Feature</strong> : regroupement de tâches</li>
         </ul>
-        <p class="mt-4" style="padding: 0.5rem; background: #fef3c7; border-radius: 0.5rem; color: #92400e; font-size: 0.85rem;">
-          👆 <strong>Créez une estimation</strong> pour continuer le tour !
-        </p>
       `,
       attachTo: {
         element: 'app-estimation-list button[title="Nouvelle estimation"]',
@@ -264,36 +280,24 @@ export class TourService {
       },
       buttons: [
         {
-          text: '← Retour',
+          text: 'Retour',
           action: this.tour.back,
           classes: 'shepherd-button-secondary'
+        },
+        {
+          text: 'Suivant',
+          action: this.tour.next,
+          classes: 'shepherd-button-primary'
         }
-      ],
-      beforeShowPromise: () => {
-        return new Promise<void>((resolve) => {
-          // Vérifier si le radar est déjà visible
-          const radarElement = document.querySelector('app-radar-chart canvas');
-          if (radarElement) {
-            resolve();
-            return;
-          }
-          resolve();
-        });
-      },
-      when: {
-        show: () => {
-          // Observer pour détecter quand le radar apparaît
-          this.setupRadarObserver();
-        }
-      }
+      ]
     });
 
     // Étape 6 : Radar Chart - visualisation
     this.tour.addStep({
       id: 'radar-chart',
-      title: '📊 Diagramme Radar',
+      title: 'Diagramme radar',
       text: `
-        <p>Le <strong>radar</strong> visualise les 5 dimensions CURSE de votre estimation :</p>
+        <p>Le <strong>radar</strong> visualise les 5 curseurs d'évaluation CURSE de votre estimation :</p>
         <ul class="mt-2 text-sm" style="list-style: none; padding: 0;">
           <li style="margin-bottom: 0.25rem;"><span style="color: #eab308;">●</span> <strong>C</strong>omplexity : difficulté technique</li>
           <li style="margin-bottom: 0.25rem;"><span style="color: #a855f7;">●</span> <strong>U</strong>ncertainty : zones floues</li>
@@ -306,9 +310,24 @@ export class TourService {
         element: 'app-radar-chart .glass-card',
         on: 'left'
       },
+      beforeShowPromise: () => {
+        return new Promise<void>((resolve) => {
+          // Vérifier que l'élément du radar existe
+          const checkElement = () => {
+            const radarElement = document.querySelector('app-radar-chart .glass-card');
+            if (radarElement) {
+              resolve();
+            } else {
+              // Réessayer après un court délai
+              setTimeout(checkElement, 100);
+            }
+          };
+          checkElement();
+        });
+      },
       buttons: [
         {
-          text: '← Retour',
+          text: 'Retour',
           action: this.tour.back,
           classes: 'shepherd-button-secondary'
         },
@@ -320,7 +339,65 @@ export class TourService {
       ]
     });
 
-    // Étape 7 : Boutons du radar (export, détails)
+    // Étape 7 : Taille T-Shirt
+    this.tour.addStep({
+      id: 'tshirt-size',
+      title: '👕 Taille T-Shirt',
+      text: `
+        <p>Chaque estimation reçoit automatiquement une <strong>taille de T-Shirt</strong> selon sa complexité :</p>
+        <p class="mt-2" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <span style="padding: 0.25rem 0.5rem; background: #dcfce7; color: #15803d; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 700;">XS</span>
+          <span style="padding: 0.25rem 0.5rem; background: #dcfce7; color: #15803d; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 700;">S</span>
+          <span style="padding: 0.25rem 0.5rem; background: #fef9c3; color: #a16207; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 700;">M</span>
+          <span style="padding: 0.25rem 0.5rem; background: #ffedd5; color: #c2410c; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 700;">L</span>
+          <span style="padding: 0.25rem 0.5rem; background: #fee2e2; color: #b91c1c; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 700;">XL</span>
+        </p>
+      `,
+      attachTo: {
+        element: 'app-radar-chart .glass-card > div:first-child > div:first-child > span:first-child',
+        on: 'bottom'
+      },
+      buttons: [
+        {
+          text: 'Retour',
+          action: this.tour.back,
+          classes: 'shepherd-button-secondary'
+        },
+        {
+          text: 'Suivant',
+          action: this.tour.next,
+          classes: 'shepherd-button-primary'
+        }
+      ]
+    });
+
+    // Étape 8 : Points de complexité
+    this.tour.addStep({
+      id: 'complexity-points',
+      title: 'Points de complexité',
+      text: `
+        <p>Les <strong>points de complexité</strong> sont calculés automatiquement à partir des curseurs d'évaluation CURSE.</p>
+        <p class="mt-2 text-sm" style="color: #94a3b8;">Ils reflètent la difficulté globale de l'estimation et sont utilisés pour déterminer la taille T-Shirt.</p>
+      `,
+      attachTo: {
+        element: 'app-radar-chart .glass-card > div:first-child > div:first-child > span:last-child',
+        on: 'bottom'
+      },
+      buttons: [
+        {
+          text: 'Retour',
+          action: this.tour.back,
+          classes: 'shepherd-button-secondary'
+        },
+        {
+          text: 'Suivant',
+          action: this.tour.next,
+          classes: 'shepherd-button-primary'
+        }
+      ]
+    });
+
+    // Étape 9 : Boutons du radar (export, détails)
     this.tour.addStep({
       id: 'radar-actions',
       title: '🔧 Actions sur le radar',
@@ -338,7 +415,7 @@ export class TourService {
       },
       buttons: [
         {
-          text: '← Retour',
+          text: 'Retour',
           action: this.tour.back,
           classes: 'shepherd-button-secondary'
         },
@@ -350,24 +427,20 @@ export class TourService {
       ]
     });
 
-    // Étape 8 : Taille T-Shirt
+    // Étape 10 : Onglet Informations
     this.tour.addStep({
-      id: 'tshirt-size',
-      title: '👕 Taille T-Shirt',
+      id: 'tab-informations',
+      title: 'Onglet informations',
       text: `
-        <p>Chaque estimation reçoit automatiquement une <strong>taille T-Shirt</strong> :</p>
-        <p class="mt-2" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-          <span style="padding: 0.25rem 0.5rem; background: #dcfce7; color: #15803d; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 700;">XS</span>
-          <span style="padding: 0.25rem 0.5rem; background: #dcfce7; color: #15803d; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 700;">S</span>
-          <span style="padding: 0.25rem 0.5rem; background: #fef9c3; color: #a16207; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 700;">M</span>
-          <span style="padding: 0.25rem 0.5rem; background: #ffedd5; color: #c2410c; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 700;">L</span>
-          <span style="padding: 0.25rem 0.5rem; background: #fee2e2; color: #b91c1c; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 700;">XL</span>
-        </p>
-        <p class="mt-2 text-sm" style="color: #94a3b8;">Calculée selon les dimensions CURSE et leurs poids.</p>
+        <p>L'onglet <strong>Informations</strong> permet de définir les détails de base de votre estimation.</p>
       `,
+      attachTo: {
+        element: 'app-estimation-form .inline-flex button:first-child',
+        on: 'bottom'
+      },
       buttons: [
         {
-          text: '← Retour',
+          text: 'Retour',
           action: this.tour.back,
           classes: 'shepherd-button-secondary'
         },
@@ -379,17 +452,62 @@ export class TourService {
       ]
     });
 
-    // Étape 9 : Paramètres
+    // Étape 11 : Onglet Évaluation
+    this.tour.addStep({
+      id: 'tab-evaluation',
+      title: '⚖️ Onglet Évaluation',
+      text: `
+        <p>L'onglet <strong>Évaluation</strong> est le cœur de l'estimation CURSE.</p>
+      `,
+      attachTo: {
+        element: 'app-estimation-form .inline-flex button:nth-child(2)',
+        on: 'bottom'
+      },
+      buttons: [
+        {
+          text: 'Retour',
+          action: this.tour.back,
+          classes: 'shepherd-button-secondary'
+        },
+        {
+          text: 'Suivant',
+          action: this.tour.next,
+          classes: 'shepherd-button-primary'
+        }
+      ]
+    });
+
+    // Étape 12 : Onglet Conseils
+    this.tour.addStep({
+      id: 'tab-conseils',
+      title: 'Onglet conseils',
+      text: `
+        <p>L'onglet <strong>Conseils</strong> vous guide dans votre estimation.</p>
+      `,
+      attachTo: {
+        element: 'app-estimation-form .inline-flex button:nth-child(3)',
+        on: 'bottom'
+      },
+      buttons: [
+        {
+          text: 'Retour',
+          action: this.tour.back,
+          classes: 'shepherd-button-secondary'
+        },
+        {
+          text: 'Suivant',
+          action: this.tour.next,
+          classes: 'shepherd-button-primary'
+        }
+      ]
+    });
+
+    // Étape 13 : Paramètres
     this.tour.addStep({
       id: 'settings',
       title: '⚙️ Paramètres',
       text: `
-        <p>Personnalisez l'application selon vos besoins :</p>
-        <ul class="mt-2 text-sm" style="list-style: none; padding: 0;">
-          <li style="margin-bottom: 0.5rem;">📝 <strong>Général</strong> : préférences utilisateur</li>
-          <li style="margin-bottom: 0.5rem;">⚖️ <strong>Poids des dimensions</strong> : ajustez l'importance de chaque critère CURSE</li>
-          <li>👕 <strong>Seuils T-Shirt</strong> : calibrez les tailles selon vos standards</li>
-        </ul>
+        <p>Personnalisez l'application selon vos besoins</p>
       `,
       attachTo: {
         element: 'button[title="Paramètres"]',
@@ -397,12 +515,12 @@ export class TourService {
       },
       buttons: [
         {
-          text: '← Retour',
+          text: 'Retour',
           action: this.tour.back,
           classes: 'shepherd-button-secondary'
         },
         {
-          text: 'Terminer ✓',
+          text: 'Terminer la visite',
           action: this.tour.complete,
           classes: 'shepherd-button-primary shepherd-button-finish'
         }
@@ -455,5 +573,29 @@ export class TourService {
       this.radarObserver.disconnect();
       this.radarObserver = null;
     }
+  }
+
+  /**
+   * Crée une estimation pour le tour guidé
+   */
+  private createEstimationForTour(): void {
+    // Créer une nouvelle estimation avec des valeurs par défaut
+    const newEstimation = this.estimationService.createEstimation({
+      name: 'Nouvelle estimation',
+      description: '',
+      type: 'user-story',
+      complexity: 0,
+      uncertainty: 0,
+      risk: 0,
+      size: 0,
+      effort: 0
+    });
+
+    // Déclencher un événement personnalisé pour notifier AppComponent
+    // Cela permettra de sélectionner et d'ouvrir l'estimation en mode édition
+    const event = new CustomEvent('tour-estimation-created', {
+      detail: { estimation: newEstimation }
+    });
+    document.dispatchEvent(event);
   }
 }
