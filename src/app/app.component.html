@@ -4,6 +4,7 @@
   <div class="absolute top-4 right-4 z-20 flex items-center gap-2">
     <!-- Bouton Aide / Tour guidé -->
     <button
+      *ngIf="currentView === 'estimation'"
       (click)="startTour()"
       class="p-2.5 text-glass-muted hover:text-glass-secondary transition-all duration-200 rounded-xl hover:bg-white/10 hover:scale-105"
       title="Aide - Tour guidé"
@@ -28,7 +29,7 @@
 
   <!-- Main Content -->
   <main class="w-full flex-1 flex flex-col overflow-hidden">
-    <div class="px-3 sm:px-6 lg:px-8 2xl:px-12 py-4 flex flex-col flex-1 overflow-hidden max-w-[2200px] mx-auto w-full">
+    <div [class]="currentView === 'planning' ? 'flex flex-col flex-1 overflow-hidden max-w-[2200px] mx-auto w-full' : 'px-3 sm:px-6 lg:px-8 2xl:px-12 py-4 flex flex-col flex-1 overflow-hidden max-w-[2200px] mx-auto w-full'">
       <!-- Header avec navigation centrée -->
       <div class="flex items-center mb-3 lg:mb-6 shrink-0 relative" *ngIf="currentView === 'estimation'">
         <!-- Logo et titre stylisé -->
@@ -219,7 +220,7 @@
       <!-- ========== VUE PLANIFICATION ========== -->
       <app-planning-board 
         *ngIf="currentView === 'planning'"
-        class="flex-1 overflow-hidden -mx-3 sm:-mx-6 lg:-mx-8 2xl:-mx-12 -mb-4"
+        class="flex-1 overflow-hidden -mb-4"
         (navigateToEstimation)="currentView = 'estimation'"
       ></app-planning-board>
     </div>

@@ -52,6 +52,7 @@ export class PlanningBoardComponent implements OnInit, OnDestroy {
   panStart = { x: 0, y: 0 };
   showSidebar = true;
   showRecommendations = false;
+  showAddMenu = false;
   isCreatingDependency = false;
   dependencySource: string | null = null;
   
@@ -95,11 +96,33 @@ export class PlanningBoardComponent implements OnInit, OnDestroy {
 
   @HostListener('wheel', ['$event'])
   onWheel(event: WheelEvent): void {
-    if (event.ctrlKey || event.metaKey) {
-      event.preventDefault();
-      const delta = event.deltaY > 0 ? -0.1 : 0.1;
-      this.setZoom(this.board.zoom + delta);
+    // Vérifier qu'on n'est pas sur un élément scrollable (sidebar, recommendations)
+    const target = event.target as HTMLElement;
+    if (target.closest('.floating-sidebar, .floating-recommendations')) {
+      return;
     }
+    
+    event.preventDefault();
+    
+    // Zoom plus précis et fluide
+    const delta = event.deltaY > 0 ? -0.05 : 0.05;
+    const newZoom = Math.max(0.25, Math.min(3, this.board.zoom + delta));
+    
+    // Zoomer vers le curseur
+    if (this.boardContainer) {
+      const rect = this.boardContainer.nativeElement.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;
+      
+      // Calculer le nouveau pan offset pour garder le point sous le curseur
+      const zoomRatio = newZoom / this.board.zoom;
+      const newPanX = mouseX - (mouseX - this.board.panOffset.x) * zoomRatio;
+      const newPanY = mouseY - (mouseY - this.board.panOffset.y) * zoomRatio;
+      
+      this.planningService.setPanOffset({ x: newPanX, y: newPanY });
+    }
+    
+    this.setZoom(newZoom);
   }
 
   setZoom(zoom: number): void {
@@ -216,12 +239,19 @@ export class PlanningBoardComponent implements OnInit, OnDestroy {
   createQuickSprint(): void {
     // Créer un sprint à une position par défaut
     const existingSprints = this.board.sprints.length;
+    // Espacement adapté pour les grands écrans
+    const sprintWidth = 500;
+    const sprintHeight = 400;
+    const gap = 50;
+    
     this.planningService.createSprint({
       name: `Sprint ${existingSprints + 1}`,
       position: { 
-        x: 100 + (existingSprints % 3) * 450, 
-        y: 100 + Math.floor(existingSprints / 3) * 350 
-      }
+        x: 100 + (existingSprints % 3) * (sprintWidth + gap), 
+        y: 100 + Math.floor(existingSprints / 3) * (sprintHeight + gap) 
+      },
+      width: sprintWidth,
+      height: sprintHeight
     });
   }
 
@@ -247,8 +277,8 @@ export class PlanningBoardComponent implements OnInit, OnDestroy {
 
   // ==================== ITEMS ====================
 
-  getItemsInSprint(sprintId: string): Estimation[] {
-    return this.planningService.getSprintItems(sprintId);
+  getItemsInSprint(sprintId: string): { estimation: Estimation; position: PlanningPosition }[] {
+    return this.planningService.getSprintItemsWithPositions(sprintId);
   }
 
   getItemsOutsideSprints(): { estimation: Estimation; position: PlanningPosition }[] {
@@ -265,12 +295,22 @@ export class PlanningBoardComponent implements OnInit, OnDestroy {
     this.planningService.moveItem(estimationId, position);
   }
 
-  onItemDroppedOnSprint(estimationId: string, sprintId: string): void {
-    this.planningService.assignToSprint(estimationId, sprintId);
+  onItemDroppedOnSprint(estimationId: string, sprintId: string, localPosition: { x: number; y: number }): void {
+    this.planningService.assignToSprint(estimationId, sprintId, localPosition);
   }
 
-  onItemRemovedFromSprint(estimationId: string): void {
-    this.planningService.removeFromSprint(estimationId);
+  onItemRemovedFromSprint(estimationId: string, dropPosition?: { x: number; y: number }): void {
+    // Convertir la position de drop (écran) en position canvas
+    if (dropPosition && this.boardContainer) {
+      const rect = this.boardContainer.nativeElement.getBoundingClientRect();
+      const canvasPosition = {
+        x: (dropPosition.x - rect.left - this.board.panOffset.x) / this.board.zoom,
+        y: (dropPosition.y - rect.top - this.board.panOffset.y) / this.board.zoom
+      };
+      this.planningService.removeFromSprint(estimationId, canvasPosition);
+    } else {
+      this.planningService.removeFromSprint(estimationId);
+    }
   }
 
   onItemAddedToBoard(estimationId: string, position: { x: number; y: number }): void {
@@ -299,8 +339,6 @@ export class PlanningBoardComponent implements OnInit, OnDestroy {
       return;
     }
     
-    // Ouvrir un dialogue pour le type et la description
-    // Pour l'instant, on crée une dépendance par défaut
     this.planningService.addDependency(
       this.dependencySource,
       targetId,

@@ -3,6 +3,10 @@
   flex-direction: column;
   transition: box-shadow 0.2s ease;
   
+  // Tailles minimales fluides
+  min-width: clamp(220px, 15vw, 320px);
+  min-height: clamp(180px, 12vw, 280px);
+  
   // Désactiver la sélection de texte
   user-select: none;
   -webkit-user-select: none;
@@ -18,8 +22,11 @@
   }
   
   &.drop-active {
-    border: 2px dashed rgba(59, 130, 246, 0.5);
-    background: rgba(59, 130, 246, 0.05);
+    border: 2px dashed rgba(59, 130, 246, 0.6);
+    background: rgba(59, 130, 246, 0.03);
+    box-shadow: 
+      0 0 0 4px rgba(59, 130, 246, 0.1),
+      0 8px 30px rgba(0, 0, 0, 0.2);
   }
   
   // Status variants
@@ -55,6 +62,11 @@
 .sprint-header {
   background: var(--inner-bg);
   user-select: none;
+  padding: clamp(0.4rem, 0.6vw, 0.75rem) clamp(0.5rem, 0.8vw, 1rem);
+  
+  h3 {
+    font-size: clamp(0.8rem, 0.85vw, 1rem);
+  }
   
   // Les dropdowns doivent avoir un curseur normal
   .dropdown-menu {
@@ -70,21 +82,19 @@
   }
 }
 
-.sprint-content {
-  min-height: 80px;
-  overflow: visible;
+.sprint-info {
+  padding: clamp(0.25rem, 0.4vw, 0.5rem) clamp(0.5rem, 0.8vw, 1rem);
+  font-size: clamp(0.65rem, 0.7vw, 0.8rem);
 }
 
-.items-grid {
-  min-height: 60px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 8px;
-  align-content: start;
+.sprint-content {
+  min-height: clamp(80px, 6vw, 140px);
+  overflow: visible;
+  padding: clamp(6px, 0.5vw, 16px);
 }
 
 .empty-sprint {
-  min-height: 80px;
+  min-height: clamp(80px, 6vw, 140px);
 }
 
 .resize-handle {

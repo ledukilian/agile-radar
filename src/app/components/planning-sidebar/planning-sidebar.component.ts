@@ -20,12 +20,14 @@ export class PlanningSidebarComponent implements OnInit, OnDestroy, AfterViewIni
   @Input() isCreatingDependency = false;
   
   @Output() itemDropped = new EventEmitter<{ estimationId: string; position: { x: number; y: number } }>();
+  @Output() itemClicked = new EventEmitter<{ estimationId: string }>();
 
   unplannedItems: Estimation[] = [];
   searchQuery = '';
   typeFilter: 'all' | 'feature' | 'user-story' = 'all';
   
   private subscriptions: Subscription[] = [];
+  private interactables: any[] = [];
 
   constructor(
     private planningService: PlanningService,
@@ -52,25 +54,62 @@ export class PlanningSidebarComponent implements OnInit, OnDestroy, AfterViewIni
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(s => s.unsubscribe());
+    // Nettoyer les interactables
+    this.interactables.forEach(i => i.unset());
+    this.interactables = [];
   }
 
   private loadUnplannedItems(): void {
     this.unplannedItems = this.planningService.getUnplannedItems();
   }
 
+  // Clic simple pour ajouter au board
+  onItemClick(estimation: Estimation): void {
+    // Calculer une position par défaut au centre visible du board
+    const boardElement = document.querySelector('.board-canvas');
+    if (boardElement) {
+      const boardRect = boardElement.getBoundingClientRect();
+      const board = this.planningService.getBoard();
+      
+      // Centre de la zone visible
+      const centerX = boardRect.width / 2;
+      const centerY = boardRect.height / 2;
+      
+      // Convertir en coordonnées canvas
+      const position = {
+        x: (centerX - board.panOffset.x) / board.zoom,
+        y: (centerY - board.panOffset.y) / board.zoom
+      };
+      
+      this.itemDropped.emit({ estimationId: estimation.id, position });
+    }
+  }
+
   private setupDraggables(): void {
+    // Nettoyer les anciens interactables
+    this.interactables.forEach(i => i.unset());
+    this.interactables = [];
+    
     // Configuration du drag pour les éléments de la sidebar
     setTimeout(() => {
       const items = this.elementRef.nativeElement.querySelectorAll('.sidebar-item');
       
       items.forEach((item: HTMLElement) => {
-        interact(item).draggable({
-          inertia: true,
+        let hasDragged = false;
+        let startX = 0;
+        let startY = 0;
+        
+        const interactable = interact(item).draggable({
+          inertia: false,
           autoScroll: true,
           ignoreFrom: 'button, .dropdown-menu, .dropdown-menu *, [data-no-drag]',
           listeners: {
             start: (event) => {
+              hasDragged = false;
+              startX = event.clientX;
+              startY = event.clientY;
               event.target.classList.add('dragging');
+              
               // Créer un clone pour le drag
               const clone = event.target.cloneNode(true) as HTMLElement;
               clone.id = 'drag-clone';
@@ -78,14 +117,26 @@ export class PlanningSidebarComponent implements OnInit, OnDestroy, AfterViewIni
               clone.style.zIndex = '10000';
               clone.style.width = event.target.offsetWidth + 'px';
               clone.style.pointerEvents = 'none';
-              clone.style.opacity = '0.8';
+              clone.style.opacity = '0.9';
+              clone.style.transform = 'scale(1.02)';
+              clone.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3)';
+              clone.style.borderRadius = '8px';
+              clone.style.left = event.clientX - event.target.offsetWidth / 2 + 'px';
+              clone.style.top = event.clientY - 20 + 'px';
               document.body.appendChild(clone);
             },
             move: (event) => {
+              // Détecter si on a vraiment bougé (seuil de 5px)
+              const dx = Math.abs(event.clientX - startX);
+              const dy = Math.abs(event.clientY - startY);
+              if (dx > 5 || dy > 5) {
+                hasDragged = true;
+              }
+              
               const clone = document.getElementById('drag-clone');
               if (clone) {
                 clone.style.left = event.clientX - clone.offsetWidth / 2 + 'px';
-                clone.style.top = event.clientY - clone.offsetHeight / 2 + 'px';
+                clone.style.top = event.clientY - 20 + 'px';
               }
             },
             end: (event) => {
@@ -93,6 +144,11 @@ export class PlanningSidebarComponent implements OnInit, OnDestroy, AfterViewIni
               const clone = document.getElementById('drag-clone');
               if (clone) {
                 clone.remove();
+              }
+
+              // Si pas de vrai drag, ignorer (le clic sera géré par le click handler)
+              if (!hasDragged) {
+                return;
               }
 
               // Vérifier si on a droppé sur le board
@@ -111,8 +167,8 @@ export class PlanningSidebarComponent implements OnInit, OnDestroy, AfterViewIni
                   // Calculer la position relative au board (en tenant compte du zoom/pan)
                   const board = this.planningService.getBoard();
                   const position = {
-                    x: (x - boardRect.left - board.panOffset.x) / board.zoom,
-                    y: (y - boardRect.top - board.panOffset.y) / board.zoom
+                    x: (x - boardRect.left - board.panOffset.x) / board.zoom - 60,
+                    y: (y - boardRect.top - board.panOffset.y) / board.zoom - 20
                   };
                   
                   this.itemDropped.emit({ estimationId, position });
@@ -121,6 +177,8 @@ export class PlanningSidebarComponent implements OnInit, OnDestroy, AfterViewIni
             }
           }
         });
+        
+        this.interactables.push(interactable);
       });
     }, 100);
   }

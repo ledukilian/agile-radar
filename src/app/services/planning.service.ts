@@ -206,21 +206,22 @@ export class PlanningService {
   }
 
   /**
-   * Assigne un élément à un sprint
+   * Assigne un élément à un sprint avec une position locale
    */
-  assignToSprint(estimationId: string, sprintId: string): void {
-    const existing = this.getPosition(estimationId);
-    const position = existing?.position || { x: 0, y: 0 };
+  assignToSprint(estimationId: string, sprintId: string, localPosition?: { x: number; y: number }): void {
+    const position = localPosition || { x: 20, y: 20 };
     this.setPosition(estimationId, position, sprintId);
   }
 
   /**
-   * Retire un élément d'un sprint
+   * Retire un élément d'un sprint et le place sur le board
    */
-  removeFromSprint(estimationId: string): void {
+  removeFromSprint(estimationId: string, newPosition?: { x: number; y: number }): void {
     const existing = this.getPosition(estimationId);
     if (existing) {
-      this.setPosition(estimationId, existing.position, undefined);
+      // Utiliser la nouvelle position fournie ou garder l'ancienne
+      const position = newPosition || existing.position;
+      this.setPosition(estimationId, position, undefined);
     }
   }
 
@@ -247,6 +248,21 @@ export class PlanningService {
     return positions
       .map(p => estimations.find(e => e.id === p.estimationId))
       .filter((e): e is Estimation => e !== undefined);
+  }
+
+  /**
+   * Retourne les éléments d'un sprint avec leurs positions
+   */
+  getSprintItemsWithPositions(sprintId: string): { estimation: Estimation; position: PlanningPosition }[] {
+    const positions = this.boardSubject.value.positions.filter(p => p.sprintId === sprintId);
+    const estimations = this.estimationService.getAllEstimations();
+    
+    return positions
+      .map(p => {
+        const estimation = estimations.find(e => e.id === p.estimationId);
+        return estimation ? { estimation, position: p } : null;
+      })
+      .filter((item): item is { estimation: Estimation; position: PlanningPosition } => item !== null);
   }
 
   /**

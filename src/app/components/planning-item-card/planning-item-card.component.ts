@@ -23,7 +23,7 @@ export class PlanningItemCardComponent implements OnInit, AfterViewInit, OnDestr
   @Input() isSelected = false;
 
   @Output() moved = new EventEmitter<{ x: number; y: number }>();
-  @Output() removed = new EventEmitter<void>();
+  @Output() removed = new EventEmitter<{ x: number; y: number } | void>();
   @Output() startDependency = new EventEmitter<string>();
   @Output() selectAsTarget = new EventEmitter<string>();
 
@@ -40,7 +40,6 @@ export class PlanningItemCardComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   ngAfterViewInit(): void {
-    // Toujours configurer interact pour permettre le drag (même depuis un sprint)
     this.setupInteract();
   }
 
@@ -58,70 +57,60 @@ export class PlanningItemCardComponent implements OnInit, AfterViewInit, OnDestr
 
   private setupInteract(): void {
     const element = this.itemElement.nativeElement;
-    let dragClone: HTMLElement | null = null;
+    
+    let startX = 0;
+    let startY = 0;
+    let isDraggingOutside = false;
 
     this.interactable = interact(element)
       .draggable({
-        inertia: this.inSprint ? false : true,
-        // Ignorer les boutons et menus pour permettre les clics
+        inertia: false,
         ignoreFrom: '.item-menu, .item-menu *, .dropdown-menu, .dropdown-menu *, button, [data-no-drag]',
-        modifiers: this.inSprint ? [] : [
-          interact.modifiers.restrictRect({
-            restriction: 'parent',
-            endOnly: true
-          })
-        ],
         listeners: {
-          start: (event) => {
+          start: () => {
             element.classList.add('dragging');
+            isDraggingOutside = false;
             
-            // Pour les items dans un sprint, créer un clone visuel
+            // Stocker la position initiale (depuis les props, pas les variables locales)
+            startX = this.position?.x || 0;
+            startY = this.position?.y || 0;
+          },
+          move: (event: any) => {
+            // Calculer la nouvelle position en ajoutant le delta au point de départ
+            startX += event.dx;
+            startY += event.dy;
+            
+            // Vérifier si on sort du sprint (pour les items dans un sprint)
             if (this.inSprint) {
-              dragClone = element.cloneNode(true) as HTMLElement;
-              dragClone.id = 'drag-clone-item';
-              dragClone.style.position = 'fixed';
-              dragClone.style.zIndex = '10000';
-              dragClone.style.width = element.offsetWidth + 'px';
-              dragClone.style.pointerEvents = 'none';
-              dragClone.style.opacity = '0.9';
-              dragClone.style.transform = 'rotate(3deg) scale(1.05)';
-              dragClone.style.left = event.clientX - element.offsetWidth / 2 + 'px';
-              dragClone.style.top = event.clientY - element.offsetHeight / 2 + 'px';
-              document.body.appendChild(dragClone);
-            }
-          },
-          move: (event) => {
-            if (this.inSprint && dragClone) {
-              // Déplacer le clone
-              dragClone.style.left = event.clientX - dragClone.offsetWidth / 2 + 'px';
-              dragClone.style.top = event.clientY - dragClone.offsetHeight / 2 + 'px';
-            } else {
-              // Comportement normal pour items hors sprint
-              const x = (this.position?.x || 0) + event.dx;
-              const y = (this.position?.y || 0) + event.dy;
-              this.moved.emit({ x, y });
-            }
-          },
-          end: (event) => {
-            element.classList.remove('dragging');
-            
-            if (this.inSprint && dragClone) {
-              dragClone.remove();
-              dragClone = null;
-              
-              // Vérifier si on a droppé en dehors du sprint parent
               const sprintElement = element.closest('.sprint-card');
               if (sprintElement) {
                 const sprintRect = sprintElement.getBoundingClientRect();
-                const x = event.clientX;
-                const y = event.clientY;
+                const isOutside = event.clientX < sprintRect.left || 
+                                  event.clientX > sprintRect.right ||
+                                  event.clientY < sprintRect.top || 
+                                  event.clientY > sprintRect.bottom;
                 
-                // Si le drop est hors du sprint, retirer l'item
-                if (x < sprintRect.left || x > sprintRect.right ||
-                    y < sprintRect.top || y > sprintRect.bottom) {
-                  this.removed.emit();
+                if (isOutside && !isDraggingOutside) {
+                  isDraggingOutside = true;
+                  element.classList.add('dragging-outside');
+                } else if (!isOutside && isDraggingOutside) {
+                  isDraggingOutside = false;
+                  element.classList.remove('dragging-outside');
                 }
               }
+            }
+            
+            // Émettre la nouvelle position
+            this.moved.emit({ x: startX, y: startY });
+          },
+          end: (event: any) => {
+            element.classList.remove('dragging');
+            element.classList.remove('dragging-outside');
+            
+            // Pour les items dans un sprint, vérifier si on a droppé en dehors
+            if (this.inSprint && isDraggingOutside) {
+              // Émettre la position de drop pour placer l'élément sur le board
+              this.removed.emit({ x: event.clientX, y: event.clientY });
             }
           }
         }
@@ -162,18 +151,12 @@ export class PlanningItemCardComponent implements OnInit, AfterViewInit, OnDestr
     return this.estimation.type === 'feature' ? 'Feature' : 'US';
   }
 
-  /**
-   * Retourne la classe de couleur selon la valeur CURSE
-   */
   getCurseIndicatorClass(value: number): string {
     if (value >= 75) return 'indicator-danger';
     if (value >= 50) return 'indicator-warning';
     return 'indicator-ok';
   }
 
-  /**
-   * Vérifie si au moins une dimension est critique
-   */
   get hasCriticalDimension(): boolean {
     return this.estimation.complexity >= 75 ||
            this.estimation.uncertainty >= 75 ||
@@ -182,9 +165,6 @@ export class PlanningItemCardComponent implements OnInit, AfterViewInit, OnDestr
            this.estimation.effort >= 75;
   }
 
-  /**
-   * Vérifie si au moins une dimension est en warning
-   */
   get hasWarningDimension(): boolean {
     const values = [
       this.estimation.complexity,

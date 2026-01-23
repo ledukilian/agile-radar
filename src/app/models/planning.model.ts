@@ -114,8 +114,8 @@ export const DEFAULT_SPRINT: Omit<Sprint, 'id' | 'createdAt' | 'updatedAt'> = {
   name: 'Nouveau Sprint',
   // capacity est optionnel - non défini par défaut
   position: { x: 100, y: 100 },
-  width: 400,
-  height: 300
+  width: 450,
+  height: 350
 };
 
 /**

@@ -1,4 +1,4 @@
-<div class="sidebar glass-card h-full flex flex-col w-72 border-r border-white/10">
+<div class="sidebar glass-card h-full flex flex-col w-full border-r border-white/10">
   <!-- Header -->
   <div class="sidebar-header px-4 py-3 border-b border-white/10">
     <h2 class="text-sm font-semibold text-glass-primary flex items-center gap-2">
@@ -78,11 +78,13 @@
       
       <div
         *ngFor="let item of features; trackBy: trackByItem"
-        class="sidebar-item glass-list-item rounded-lg px-2 py-1.5 cursor-grab"
+        class="sidebar-item glass-list-item rounded-lg px-2 py-1.5 cursor-pointer"
         [class.border-l-red-500]="hasCriticalDimension(item)"
         [class.border-l-amber-500]="hasWarningDimension(item)"
         [class.border-l-green-500]="!hasCriticalDimension(item) && !hasWarningDimension(item)"
         [attr.data-estimation-id]="item.id"
+        (click)="onItemClick(item)"
+        title="Cliquer pour ajouter au board, ou glisser-déposer"
       >
         <div class="flex items-center gap-2">
           <span class="text-sm shrink-0">⭐</span>
@@ -107,11 +109,13 @@
       
       <div
         *ngFor="let item of userStories; trackBy: trackByItem"
-        class="sidebar-item glass-list-item rounded-lg px-2 py-1.5 cursor-grab"
+        class="sidebar-item glass-list-item rounded-lg px-2 py-1.5 cursor-pointer"
         [class.border-l-red-500]="hasCriticalDimension(item)"
         [class.border-l-amber-500]="hasWarningDimension(item)"
         [class.border-l-green-500]="!hasCriticalDimension(item) && !hasWarningDimension(item)"
         [attr.data-estimation-id]="item.id"
+        (click)="onItemClick(item)"
+        title="Cliquer pour ajouter au board, ou glisser-déposer"
       >
         <div class="flex items-center gap-2">
           <span class="text-sm shrink-0">🧩</span>

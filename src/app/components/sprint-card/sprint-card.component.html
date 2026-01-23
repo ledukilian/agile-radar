@@ -39,7 +39,30 @@
       </ng-container>
     </div>
 
-    <div class="flex items-center gap-1 shrink-0">
+    <div class="flex items-center gap-2 shrink-0">
+      <!-- Compteur points -->
+      <span 
+        class="text-[11px] font-medium tabular-nums"
+        [class.text-red-400]="sprint.capacity && sprintInfo && sprintInfo.loadPercentage > 100"
+        [class.text-amber-400]="sprint.capacity && sprintInfo && sprintInfo.loadPercentage > 85 && sprintInfo.loadPercentage <= 100"
+        [class.text-green-400]="sprint.capacity && sprintInfo && sprintInfo.loadPercentage <= 85"
+        [class.text-glass-muted]="!sprint.capacity"
+      >
+        {{ sprintInfo?.usedPoints || 0 }}<span *ngIf="sprint.capacity">/{{ sprint.capacity }}</span> pts
+      </span>
+
+      <!-- Compteur dépendances -->
+      <span 
+        *ngIf="sprintInfo && sprintInfo.unresolvedDependencies > 0"
+        class="flex items-center gap-0.5 text-amber-400 text-[10px]"
+        title="Dépendances non résolues"
+      >
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+        </svg>
+        {{ sprintInfo.unresolvedDependencies }}
+      </span>
+
       <!-- Badge status -->
       <span 
         *ngIf="sprintInfo && sprintInfo.status !== 'empty'"
@@ -87,7 +110,7 @@
           </svg>
         </button>
         
-        <!-- Overlay pour fermer le menu (dans le même contexte de stacking) -->
+        <!-- Overlay pour fermer le menu -->
         <div 
           *ngIf="showSettings"
           class="fixed inset-0"
@@ -156,65 +179,43 @@
     ></div>
   </div>
 
-  <!-- Infos sprint -->
-  <div class="sprint-info px-3 py-1.5 flex items-center justify-between text-xs border-b border-white/5">
-    <div class="flex items-center gap-3 text-glass-muted">
-      <span *ngIf="sprint.startDate || sprint.endDate" class="flex items-center gap-1">
-        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        <span *ngIf="sprint.startDate">{{ sprint.startDate }}</span>
-        <span *ngIf="sprint.startDate && sprint.endDate">→</span>
-        <span *ngIf="sprint.endDate">{{ sprint.endDate }}</span>
-      </span>
-    </div>
-    <div class="flex items-center gap-3">
-      <!-- Compteur points -->
-      <span 
-        class="font-medium"
-        [class.text-red-400]="sprint.capacity && sprintInfo && sprintInfo.loadPercentage > 100"
-        [class.text-amber-400]="sprint.capacity && sprintInfo && sprintInfo.loadPercentage > 85 && sprintInfo.loadPercentage <= 100"
-        [class.text-green-400]="sprint.capacity && sprintInfo && sprintInfo.loadPercentage <= 85"
-      >
-        {{ sprintInfo?.usedPoints || 0 }}<span *ngIf="sprint.capacity"> / {{ sprint.capacity }}</span> pts
-      </span>
-      <!-- Compteur dépendances -->
-      <span 
-        *ngIf="sprintInfo && sprintInfo.unresolvedDependencies > 0"
-        class="flex items-center gap-1 text-amber-400"
-        title="Dépendances non résolues"
-      >
-        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-        </svg>
-        {{ sprintInfo.unresolvedDependencies }}
-      </span>
-    </div>
+  <!-- Infos sprint (dates uniquement, affiché seulement si dates définies) -->
+  <div 
+    *ngIf="sprint.startDate || sprint.endDate"
+    class="sprint-info px-3 py-1 flex items-center text-xs text-glass-muted border-b border-white/5"
+  >
+    <svg class="w-3 h-3 mr-1.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+    <span *ngIf="sprint.startDate">{{ sprint.startDate }}</span>
+    <span *ngIf="sprint.startDate && sprint.endDate" class="mx-1">→</span>
+    <span *ngIf="sprint.endDate">{{ sprint.endDate }}</span>
   </div>
 
-  <!-- Zone de contenu (items) -->
-  <div class="sprint-content flex-1 p-2">
-    <div class="items-grid">
-      <app-planning-item-card
-        *ngFor="let item of items; trackBy: trackByItem"
-        [estimation]="item"
-        [compact]="true"
-        [inSprint]="true"
-        [isCreatingDependency]="isCreatingDependency"
-        [isSelected]="dependencySource === item.id"
-        (removed)="onItemRemoved(item.id)"
-        (startDependency)="onStartDependency($event)"
-        (selectAsTarget)="onSelectAsTarget($event)"
-      ></app-planning-item-card>
-    </div>
+  <!-- Zone de contenu (items) - Positionnement libre -->
+  <div #contentArea class="sprint-content flex-1 relative overflow-hidden">
+    <!-- Items avec positionnement absolu -->
+    <app-planning-item-card
+      *ngFor="let item of items; trackBy: trackByItem"
+      [estimation]="item.estimation"
+      [position]="item.position.position"
+      [compact]="true"
+      [inSprint]="true"
+      [isCreatingDependency]="isCreatingDependency"
+      [isSelected]="dependencySource === item.estimation.id"
+      (moved)="onItemMoved(item.estimation.id, $event)"
+      (removed)="onItemRemoved(item.estimation.id, $any($event))"
+      (startDependency)="onStartDependency($event)"
+      (selectAsTarget)="onSelectAsTarget($event)"
+    ></app-planning-item-card>
 
     <!-- Message si vide -->
     <div 
       *ngIf="items.length === 0"
-      class="empty-sprint h-full flex items-center justify-center text-glass-muted text-sm"
+      class="empty-sprint absolute inset-0 flex items-center justify-center text-glass-muted text-sm pointer-events-none"
     >
       <div class="text-center">
-        <span>Glissez des éléments ici</span>
+        <span class="opacity-60">Glissez des éléments ici</span>
       </div>
     </div>
   </div>

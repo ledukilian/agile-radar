@@ -15,6 +15,7 @@
 .board-canvas {
   background: var(--card-bg);
   cursor: grab;
+  overflow: hidden;
   
   &:active {
     cursor: grabbing;
@@ -78,21 +79,23 @@
   }
 }
 
-// Sidebar flottante
+// Sidebar flottante - Taille fluide
 .floating-sidebar {
-  width: 280px;
+  // Largeur fluide : min 260px, préféré 18vw, max 380px
+  width: clamp(260px, 18vw, 380px);
   max-height: calc(100% - 10rem);
 }
 
-// Recommandations flottantes
+// Recommandations flottantes - Taille fluide
 .floating-recommendations {
-  width: 300px;
+  // Largeur fluide : min 280px, préféré 20vw, max 420px
+  width: clamp(280px, 20vw, 420px);
   max-height: calc(100% - 10rem);
 }
 
 // Toolbar en bas
 .toolbar-bottom {
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.3) 0%, transparent 100%);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.15) 0%, transparent 100%);
   pointer-events: none;
   
   .toolbar {
@@ -103,11 +106,23 @@
 .toolbar {
   border: 1px solid var(--card-border);
   backdrop-filter: blur(16px);
+  
+  &.toolbar-center {
+    padding: clamp(0.4rem, 0.5vw, 0.75rem) clamp(0.75rem, 1vw, 1.5rem);
+    gap: clamp(0.4rem, 0.5vw, 0.75rem);
+  }
+  
+  &.toolbar-left,
+  &.toolbar-right {
+    padding: clamp(0.4rem, 0.5vw, 0.6rem) clamp(0.5rem, 0.75vw, 1rem);
+    gap: clamp(0.25rem, 0.4vw, 0.5rem);
+  }
 }
 
 .toolbar-btn {
   @apply p-2 rounded-lg transition-all duration-200;
   color: var(--text-secondary);
+  padding: clamp(0.4rem, 0.5vw, 0.625rem);
   
   &:hover {
     background: var(--list-hover-bg);
@@ -119,12 +134,15 @@
     color: var(--text-primary);
     border: 1px solid var(--list-selected-border);
   }
+  
+  svg {
+    width: clamp(1rem, 1.2vw, 1.25rem);
+    height: clamp(1rem, 1.2vw, 1.25rem);
+  }
 }
 
 // Animation pour les items draggables
 :host ::ng-deep .planning-item {
-  transition: box-shadow 0.2s ease, transform 0.1s ease;
-  
   &:hover {
     z-index: 10;
   }
@@ -132,7 +150,6 @@
   &.dragging {
     z-index: 1000;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-    transform: scale(1.02);
   }
 }
 

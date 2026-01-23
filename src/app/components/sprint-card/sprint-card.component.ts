@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import interact from 'interactjs';
 
-import { Sprint, SprintInfo, SprintStatus } from '../../models/planning.model';
+import { Sprint, SprintInfo, PlanningPosition } from '../../models/planning.model';
 import { Estimation } from '../../models/estimation.model';
 import { PlanningItemCardComponent } from '../planning-item-card/planning-item-card.component';
 
@@ -16,10 +16,11 @@ import { PlanningItemCardComponent } from '../planning-item-card/planning-item-c
 })
 export class SprintCardComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
   @ViewChild('sprintElement') sprintElement!: ElementRef<HTMLDivElement>;
+  @ViewChild('contentArea') contentArea!: ElementRef<HTMLDivElement>;
 
   @Input() sprint!: Sprint;
   @Input() sprintInfo: SprintInfo | null = null;
-  @Input() items: Estimation[] = [];
+  @Input() items: { estimation: Estimation; position: PlanningPosition }[] = [];
   @Input() isCreatingDependency = false;
   @Input() dependencySource: string | null = null;
 
@@ -28,8 +29,8 @@ export class SprintCardComponent implements OnInit, OnChanges, AfterViewInit, On
   @Output() updated = new EventEmitter<Partial<Sprint>>();
   @Output() deleted = new EventEmitter<void>();
   @Output() itemMoved = new EventEmitter<{ id: string; position: { x: number; y: number } }>();
-  @Output() itemRemoved = new EventEmitter<string>();
-  @Output() itemDropped = new EventEmitter<string>();
+  @Output() itemRemoved = new EventEmitter<{ id: string; dropPosition?: { x: number; y: number } }>();
+  @Output() itemDropped = new EventEmitter<{ id: string; localPosition: { x: number; y: number } }>();
   @Output() startDependency = new EventEmitter<string>();
   @Output() selectDependencyTarget = new EventEmitter<string>();
 
@@ -48,7 +49,6 @@ export class SprintCardComponent implements OnInit, OnChanges, AfterViewInit, On
   }
 
   ngOnChanges(): void {
-    // Synchroniser editCapacity avec sprint.capacity quand il change
     this.editCapacity = this.sprint.capacity;
   }
 
@@ -71,26 +71,30 @@ export class SprintCardComponent implements OnInit, OnChanges, AfterViewInit, On
   private setupInteract(): void {
     const element = this.sprintElement.nativeElement;
 
+    let currentX = 0;
+    let currentY = 0;
+
     // Draggable (sur le header uniquement)
     this.interactable = interact(element.querySelector('.sprint-header') as HTMLElement)
       .draggable({
-        inertia: true,
-        // Ignorer les boutons et menus pour permettre les clics
+        inertia: false,
         ignoreFrom: 'button, input, .dropdown-menu, .dropdown-menu *, [data-no-drag]',
-        modifiers: [
-          interact.modifiers.restrictRect({
-            restriction: 'parent',
-            endOnly: true
-          })
-        ],
         listeners: {
-          move: (event) => {
-            const x = this.sprint.position.x + event.dx;
-            const y = this.sprint.position.y + event.dy;
-            this.moved.emit({ x, y });
+          start: () => {
+            currentX = this.sprint.position.x;
+            currentY = this.sprint.position.y;
+          },
+          move: (event: any) => {
+            currentX += event.dx;
+            currentY += event.dy;
+            this.moved.emit({ x: currentX, y: currentY });
           }
         }
       });
+
+    // Variables pour le resize
+    let startWidth = 0;
+    let startHeight = 0;
 
     // Resizable
     this.resizable = interact(element)
@@ -98,14 +102,27 @@ export class SprintCardComponent implements OnInit, OnChanges, AfterViewInit, On
         edges: { right: true, bottom: true, left: false, top: false },
         modifiers: [
           interact.modifiers.restrictSize({
-            min: { width: 200, height: 150 }
+            min: { width: 250, height: 200 }
           })
         ],
         listeners: {
+          start: () => {
+            // Capturer les dimensions initiales au début du resize
+            startWidth = this.sprint.width;
+            startHeight = this.sprint.height;
+          },
           move: (event) => {
+            // Calculer les nouvelles dimensions basées sur le delta
+            const newWidth = Math.max(250, startWidth + event.deltaRect.width);
+            const newHeight = Math.max(200, startHeight + event.deltaRect.height);
+            
+            // Mettre à jour les dimensions de départ pour le prochain move
+            startWidth = newWidth;
+            startHeight = newHeight;
+            
             this.resized.emit({
-              width: event.rect.width,
-              height: event.rect.height
+              width: newWidth,
+              height: newHeight
             });
           }
         }
@@ -114,21 +131,41 @@ export class SprintCardComponent implements OnInit, OnChanges, AfterViewInit, On
     // Dropzone
     this.dropzone = interact(element)
       .dropzone({
-        accept: '.planning-item',
-        overlap: 0.5,
+        accept: '.planning-item, .sidebar-item',
+        overlap: 0.3,
         ondrop: (event) => {
           const estimationId = event.relatedTarget.dataset['estimationId'];
           if (estimationId) {
-            this.itemDropped.emit(estimationId);
+            // Calculer la position locale dans le sprint
+            const contentRect = this.contentArea?.nativeElement?.getBoundingClientRect();
+            if (contentRect) {
+              // Position du curseur relative à la zone de contenu
+              const localX = event.dragEvent.clientX - contentRect.left;
+              const localY = event.dragEvent.clientY - contentRect.top;
+              
+              // Centrer l'élément sous le curseur (estimation de la taille de la carte)
+              const cardHalfWidth = 60;
+              const cardHalfHeight = 25;
+              
+              this.itemDropped.emit({ 
+                id: estimationId, 
+                localPosition: { 
+                  x: Math.max(10, localX - cardHalfWidth), 
+                  y: Math.max(10, localY - cardHalfHeight) 
+                }
+              });
+            } else {
+              this.itemDropped.emit({ id: estimationId, localPosition: { x: 20, y: 20 } });
+            }
           }
         },
-        ondragenter: (event) => {
+        ondragenter: () => {
           element.classList.add('drop-active');
         },
-        ondragleave: (event) => {
+        ondragleave: () => {
           element.classList.remove('drop-active');
         },
-        ondropdeactivate: (event) => {
+        ondropdeactivate: () => {
           element.classList.remove('drop-active');
         }
       });
@@ -176,8 +213,8 @@ export class SprintCardComponent implements OnInit, OnChanges, AfterViewInit, On
     this.itemMoved.emit({ id: estimationId, position });
   }
 
-  onItemRemoved(estimationId: string): void {
-    this.itemRemoved.emit(estimationId);
+  onItemRemoved(estimationId: string, dropPosition?: { x: number; y: number }): void {
+    this.itemRemoved.emit({ id: estimationId, dropPosition });
   }
 
   onStartDependency(estimationId: string): void {
@@ -229,7 +266,7 @@ export class SprintCardComponent implements OnInit, OnChanges, AfterViewInit, On
     return 'bg-blue-400';
   }
 
-  trackByItem(index: number, item: Estimation): string {
-    return item.id;
+  trackByItem(index: number, item: { estimation: Estimation; position: PlanningPosition }): string {
+    return item.estimation.id;
   }
 }
