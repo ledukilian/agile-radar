@@ -17,13 +17,12 @@ export class PlanningItemCardComponent implements OnInit, AfterViewInit, OnDestr
 
   @Input() estimation!: Estimation;
   @Input() position?: { x: number; y: number };
-  @Input() compact = false;
-  @Input() inSprint = false;
   @Input() isCreatingDependency = false;
   @Input() isSelected = false;
+  @Input() showMetrics = true;
 
   @Output() moved = new EventEmitter<{ x: number; y: number }>();
-  @Output() removed = new EventEmitter<{ x: number; y: number } | void>();
+  @Output() removed = new EventEmitter<void>();
   @Output() startDependency = new EventEmitter<string>();
   @Output() selectAsTarget = new EventEmitter<string>();
 
@@ -60,7 +59,6 @@ export class PlanningItemCardComponent implements OnInit, AfterViewInit, OnDestr
     
     let startX = 0;
     let startY = 0;
-    let isDraggingOutside = false;
 
     this.interactable = interact(element)
       .draggable({
@@ -69,49 +67,20 @@ export class PlanningItemCardComponent implements OnInit, AfterViewInit, OnDestr
         listeners: {
           start: () => {
             element.classList.add('dragging');
-            isDraggingOutside = false;
-            
-            // Stocker la position initiale (depuis les props, pas les variables locales)
+            // Stocker la position initiale
             startX = this.position?.x || 0;
             startY = this.position?.y || 0;
           },
           move: (event: any) => {
-            // Calculer la nouvelle position en ajoutant le delta au point de départ
+            // Utiliser le delta pour mettre à jour la position
             startX += event.dx;
             startY += event.dy;
-            
-            // Vérifier si on sort du sprint (pour les items dans un sprint)
-            if (this.inSprint) {
-              const sprintElement = element.closest('.sprint-card');
-              if (sprintElement) {
-                const sprintRect = sprintElement.getBoundingClientRect();
-                const isOutside = event.clientX < sprintRect.left || 
-                                  event.clientX > sprintRect.right ||
-                                  event.clientY < sprintRect.top || 
-                                  event.clientY > sprintRect.bottom;
-                
-                if (isOutside && !isDraggingOutside) {
-                  isDraggingOutside = true;
-                  element.classList.add('dragging-outside');
-                } else if (!isOutside && isDraggingOutside) {
-                  isDraggingOutside = false;
-                  element.classList.remove('dragging-outside');
-                }
-              }
-            }
             
             // Émettre la nouvelle position
             this.moved.emit({ x: startX, y: startY });
           },
-          end: (event: any) => {
+          end: () => {
             element.classList.remove('dragging');
-            element.classList.remove('dragging-outside');
-            
-            // Pour les items dans un sprint, vérifier si on a droppé en dehors
-            if (this.inSprint && isDraggingOutside) {
-              // Émettre la position de drop pour placer l'élément sur le board
-              this.removed.emit({ x: event.clientX, y: event.clientY });
-            }
           }
         }
       });
@@ -127,6 +96,7 @@ export class PlanningItemCardComponent implements OnInit, AfterViewInit, OnDestr
 
   onStartDependency(event: Event): void {
     event.stopPropagation();
+    this.showMenu = false;
     this.startDependency.emit(this.estimation.id);
   }
 
@@ -148,13 +118,7 @@ export class PlanningItemCardComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   get typeLabel(): string {
-    return this.estimation.type === 'feature' ? 'Feature' : 'US';
-  }
-
-  getCurseIndicatorClass(value: number): string {
-    if (value >= 75) return 'indicator-danger';
-    if (value >= 50) return 'indicator-warning';
-    return 'indicator-ok';
+    return this.estimation.type === 'feature' ? 'Feature' : 'User Story';
   }
 
   get hasCriticalDimension(): boolean {

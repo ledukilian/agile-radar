@@ -1,0 +1,69 @@
+.sticky-note-card {
+  z-index: 10;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -2px rgba(0, 0, 0, 0.1),
+    4px 4px 0 -1px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s ease, transform 0.1s ease;
+  
+  // Effet de pliure en haut à droite
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, 0.1) 50%);
+    pointer-events: none;
+  }
+  
+  &:hover {
+    box-shadow: 
+      0 10px 15px -3px rgba(0, 0, 0, 0.15),
+      0 4px 6px -4px rgba(0, 0, 0, 0.1),
+      6px 6px 0 -1px rgba(0, 0, 0, 0.08);
+    z-index: 20;
+  }
+  
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.sticky-header {
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), transparent);
+}
+
+.sticky-content {
+  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.1));
+  
+  textarea {
+    font-family: inherit;
+  }
+}
+
+.sticky-footer {
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.05));
+}
+
+.color-picker {
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.resize-handle {
+  &:hover svg {
+    opacity: 0.6;
+  }
+}

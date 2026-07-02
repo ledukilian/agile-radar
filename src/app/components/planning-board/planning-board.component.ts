@@ -12,15 +12,21 @@ import {
   Sprint, 
   PlanningPosition, 
   Dependency,
-  SprintInfo
+  SprintInfo,
+  StickyNote,
+  DrawingStroke,
+  DrawingPoint,
+  DrawingSettings,
+  DEFAULT_DRAWING_SETTINGS
 } from '../../models/planning.model';
-import { Estimation } from '../../models/estimation.model';
+import { Estimation, TShirtSize } from '../../models/estimation.model';
 
 import { SprintCardComponent } from '../sprint-card/sprint-card.component';
 import { PlanningItemCardComponent } from '../planning-item-card/planning-item-card.component';
 import { DependencyLineComponent } from '../dependency-line/dependency-line.component';
 import { PlanningSidebarComponent } from '../planning-sidebar/planning-sidebar.component';
 import { PlanningRecommendationsComponent } from '../planning-recommendations/planning-recommendations.component';
+import { StickyNoteCardComponent } from '../sticky-note-card/sticky-note-card.component';
 
 @Component({
   selector: 'app-planning-board',
@@ -32,7 +38,8 @@ import { PlanningRecommendationsComponent } from '../planning-recommendations/pl
     PlanningItemCardComponent,
     DependencyLineComponent,
     PlanningSidebarComponent,
-    PlanningRecommendationsComponent
+    PlanningRecommendationsComponent,
+    StickyNoteCardComponent
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './planning-board.component.html',
@@ -50,16 +57,26 @@ export class PlanningBoardComponent implements OnInit, OnDestroy {
   // État de l'interface
   isPanning = false;
   panStart = { x: 0, y: 0 };
-  showSidebar = true;
-  showRecommendations = false;
+  activePanel: 'backlog' | 'sprint' | 'recommendations' | null = 'backlog';
   showAddMenu = false;
   isCreatingDependency = false;
   dependencySource: string | null = null;
+  showFeatures = true;
+  showUserStories = true;
+  showMetrics = true;
   
   // Mode création sprint
   isCreatingSprint = false;
   newSprintStart: { x: number; y: number } | null = null;
   newSprintCurrent: { x: number; y: number } | null = null;
+  
+  // Mode dessin
+  isDrawingMode = false;
+  isCurrentlyDrawing = false;
+  isEraserMode = false;
+  currentStroke: DrawingPoint[] = [];
+  drawingSettings: DrawingSettings = { ...DEFAULT_DRAWING_SETTINGS };
+  showDrawingSettings = false;
 
   private subscriptions: Subscription[] = [];
 
@@ -144,7 +161,7 @@ export class PlanningBoardComponent implements OnInit, OnDestroy {
 
   onPanStart(event: MouseEvent): void {
     // Ne pas démarrer le pan si on clique sur un élément interactif
-    if ((event.target as HTMLElement).closest('.planning-item, .sprint-card, .sidebar, .recommendations')) {
+    if ((event.target as HTMLElement).closest('.planning-item, .sprint-card, .sidebar, .recommendations, .sticky-note-card')) {
       return;
     }
     
@@ -215,6 +232,18 @@ export class PlanningBoardComponent implements OnInit, OnDestroy {
     this.planningService.toggleGrid();
   }
 
+  toggleFeatures(): void {
+    this.showFeatures = !this.showFeatures;
+  }
+
+  toggleUserStories(): void {
+    this.showUserStories = !this.showUserStories;
+  }
+
+  toggleMetrics(): void {
+    this.showMetrics = !this.showMetrics;
+  }
+
   snapToGrid(position: { x: number; y: number }): { x: number; y: number } {
     if (!this.board.gridEnabled) return position;
     
@@ -277,40 +306,36 @@ export class PlanningBoardComponent implements OnInit, OnDestroy {
 
   // ==================== ITEMS ====================
 
-  getItemsInSprint(sprintId: string): { estimation: Estimation; position: PlanningPosition }[] {
-    return this.planningService.getSprintItemsWithPositions(sprintId);
-  }
-
-  getItemsOutsideSprints(): { estimation: Estimation; position: PlanningPosition }[] {
-    const positions = this.board.positions.filter(p => !p.sprintId);
-    return positions
+  /**
+   * Retourne tous les items sur le board avec leurs positions
+   */
+  getAllItems(): { estimation: Estimation; position: PlanningPosition }[] {
+    return this.board.positions
       .map(pos => {
         const estimation = this.estimations.find(e => e.id === pos.estimationId);
         return estimation ? { estimation, position: pos } : null;
       })
-      .filter((item): item is { estimation: Estimation; position: PlanningPosition } => item !== null);
+      .filter((item): item is { estimation: Estimation; position: PlanningPosition } => item !== null)
+      .filter(item => {
+        if (item.estimation.type === 'feature') {
+          return this.showFeatures;
+        }
+        if (item.estimation.type === 'user-story') {
+          return this.showUserStories;
+        }
+        return true; // Si pas de type, on affiche par défaut
+      });
+  }
+
+  /**
+   * Retourne les items dans un sprint (pour le calcul des stats)
+   */
+  getItemsInSprint(sprintId: string): { estimation: Estimation; position: PlanningPosition }[] {
+    return this.planningService.getSprintItemsWithPositions(sprintId);
   }
 
   onItemMoved(estimationId: string, position: { x: number; y: number }): void {
     this.planningService.moveItem(estimationId, position);
-  }
-
-  onItemDroppedOnSprint(estimationId: string, sprintId: string, localPosition: { x: number; y: number }): void {
-    this.planningService.assignToSprint(estimationId, sprintId, localPosition);
-  }
-
-  onItemRemovedFromSprint(estimationId: string, dropPosition?: { x: number; y: number }): void {
-    // Convertir la position de drop (écran) en position canvas
-    if (dropPosition && this.boardContainer) {
-      const rect = this.boardContainer.nativeElement.getBoundingClientRect();
-      const canvasPosition = {
-        x: (dropPosition.x - rect.left - this.board.panOffset.x) / this.board.zoom,
-        y: (dropPosition.y - rect.top - this.board.panOffset.y) / this.board.zoom
-      };
-      this.planningService.removeFromSprint(estimationId, canvasPosition);
-    } else {
-      this.planningService.removeFromSprint(estimationId);
-    }
   }
 
   onItemAddedToBoard(estimationId: string, position: { x: number; y: number }): void {
@@ -364,12 +389,8 @@ export class PlanningBoardComponent implements OnInit, OnDestroy {
 
   // ==================== UI ====================
 
-  toggleSidebar(): void {
-    this.showSidebar = !this.showSidebar;
-  }
-
-  toggleRecommendations(): void {
-    this.showRecommendations = !this.showRecommendations;
+  setActivePanel(panel: 'backlog' | 'sprint' | 'recommendations'): void {
+    this.activePanel = this.activePanel === panel ? null : panel;
   }
 
   goToEstimation(): void {
@@ -378,6 +399,79 @@ export class PlanningBoardComponent implements OnInit, OnDestroy {
 
   getEstimation(id: string): Estimation | undefined {
     return this.estimations.find(e => e.id === id);
+  }
+
+  // ==================== SPRINT SUMMARY ====================
+
+  /**
+   * Retourne le nombre total d'éléments planifiés sur le board
+   */
+  getTotalPlannedItems(): number {
+    return this.board.positions.length;
+  }
+
+  /**
+   * Retourne le total des points planifiés
+   */
+  getTotalPlannedPoints(): number {
+    return this.getAllItems().reduce((sum, item) => {
+      return sum + this.getEstimationPoints(item.estimation);
+    }, 0);
+  }
+
+  /**
+   * Retourne les points d'une estimation
+   */
+  getEstimationPoints(estimation: Estimation): number {
+    return Math.ceil(this.settingsService.calculateComplexityPoints(estimation));
+  }
+
+  /**
+   * Retourne la taille T-shirt pour une estimation
+   */
+  getTShirtSize(estimation: Estimation): TShirtSize {
+    const points = this.getEstimationPoints(estimation);
+    const type = estimation.type || 'user-story';
+    return this.settingsService.getTShirtSizeByPoints(points, type);
+  }
+
+  /**
+   * Retourne les éléments qui sont sur le board mais pas dans un sprint
+   */
+  getUnassignedItems(): { estimation: Estimation; position: PlanningPosition }[] {
+    return this.getAllItems().filter(item => {
+      const sprintId = this.planningService.getSprintForItem(item.estimation.id);
+      return !sprintId;
+    });
+  }
+
+  /**
+   * Centre la vue sur un sprint
+   */
+  focusOnSprint(sprint: Sprint): void {
+    const centerX = sprint.position.x + sprint.width / 2;
+    const centerY = sprint.position.y + sprint.height / 2;
+    
+    // Calculer le décalage pour centrer le sprint dans la vue
+    const containerRect = this.boardContainer?.nativeElement?.getBoundingClientRect();
+    if (containerRect) {
+      const offsetX = containerRect.width / 2 - centerX * this.board.zoom;
+      const offsetY = containerRect.height / 2 - centerY * this.board.zoom;
+      this.planningService.setPanOffset({ x: offsetX, y: offsetY });
+    }
+  }
+
+  /**
+   * Centre la vue sur un élément
+   */
+  focusOnItem(estimationId: string): void {
+    const position = this.getItemPosition(estimationId);
+    if (position && this.boardContainer) {
+      const containerRect = this.boardContainer.nativeElement.getBoundingClientRect();
+      const offsetX = containerRect.width / 2 - position.x * this.board.zoom;
+      const offsetY = containerRect.height / 2 - position.y * this.board.zoom;
+      this.planningService.setPanOffset({ x: offsetX, y: offsetY });
+    }
   }
 
   // Style helpers
@@ -427,5 +521,145 @@ export class PlanningBoardComponent implements OnInit, OnDestroy {
 
   trackByDependency(index: number, dep: Dependency): string {
     return dep.id;
+  }
+
+  trackByStickyNote(index: number, note: StickyNote): string {
+    return note.id;
+  }
+
+  trackByDrawing(index: number, stroke: DrawingStroke): string {
+    return stroke.id;
+  }
+
+  // ==================== STICKY NOTES ====================
+
+  createQuickStickyNote(): void {
+    // Position centrée par rapport à la vue actuelle
+    const containerRect = this.boardContainer?.nativeElement?.getBoundingClientRect();
+    let x = 300;
+    let y = 200;
+    
+    if (containerRect) {
+      x = (containerRect.width / 2 - this.board.panOffset.x) / this.board.zoom - 100;
+      y = (containerRect.height / 2 - this.board.panOffset.y) / this.board.zoom - 100;
+    }
+    
+    this.planningService.createStickyNote({
+      position: { x, y }
+    });
+  }
+
+  onStickyNoteMoved(noteId: string, position: { x: number; y: number }): void {
+    this.planningService.moveStickyNote(noteId, position);
+  }
+
+  onStickyNoteResized(noteId: string, size: { width: number; height: number }): void {
+    this.planningService.updateStickyNote(noteId, size);
+  }
+
+  onStickyNoteUpdated(noteId: string, updates: Partial<StickyNote>): void {
+    this.planningService.updateStickyNote(noteId, updates);
+  }
+
+  onStickyNoteDeleted(noteId: string): void {
+    this.planningService.deleteStickyNote(noteId);
+  }
+
+  // ==================== DRAWING MODE ====================
+
+  toggleDrawingMode(): void {
+    this.isDrawingMode = !this.isDrawingMode;
+    if (!this.isDrawingMode) {
+      this.showDrawingSettings = false;
+      this.isCurrentlyDrawing = false;
+      this.currentStroke = [];
+      this.isEraserMode = false;
+    } else {
+      this.isEraserMode = false;
+    }
+  }
+
+  toggleEraserMode(): void {
+    this.isEraserMode = !this.isEraserMode;
+  }
+
+  toggleDrawingSettings(): void {
+    this.showDrawingSettings = !this.showDrawingSettings;
+  }
+
+  setDrawingColor(color: string): void {
+    this.drawingSettings.color = color;
+    this.isEraserMode = false; // Désactiver la gomme quand on choisit une couleur
+  }
+
+  setDrawingThickness(thickness: number): void {
+    this.drawingSettings.thickness = thickness;
+  }
+
+  onDrawingStart(event: MouseEvent): void {
+    if (!this.isDrawingMode) return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    this.isCurrentlyDrawing = true;
+    this.currentStroke = [];
+    
+    const point = this.getCanvasPoint(event);
+    this.currentStroke.push(point);
+  }
+
+  onDrawingMove(event: MouseEvent): void {
+    if (!this.isDrawingMode || !this.isCurrentlyDrawing) return;
+    
+    event.preventDefault();
+    
+    const point = this.getCanvasPoint(event);
+    this.currentStroke.push(point);
+  }
+
+  onDrawingEnd(event: MouseEvent): void {
+    if (!this.isDrawingMode || !this.isCurrentlyDrawing) return;
+    
+    event.preventDefault();
+    
+    if (this.currentStroke.length > 1) {
+      this.planningService.addDrawingStroke({
+        points: [...this.currentStroke],
+        color: this.drawingSettings.color,
+        thickness: this.drawingSettings.thickness
+      });
+    }
+    
+    this.isCurrentlyDrawing = false;
+    this.currentStroke = [];
+  }
+
+  private getCanvasPoint(event: MouseEvent): DrawingPoint {
+    const rect = this.boardContainer.nativeElement.getBoundingClientRect();
+    return {
+      x: (event.clientX - rect.left - this.board.panOffset.x) / this.board.zoom,
+      y: (event.clientY - rect.top - this.board.panOffset.y) / this.board.zoom
+    };
+  }
+
+  getStrokePath(points: DrawingPoint[]): string {
+    if (points.length < 2) return '';
+    
+    let path = `M ${points[0].x} ${points[0].y}`;
+    
+    for (let i = 1; i < points.length; i++) {
+      path += ` L ${points[i].x} ${points[i].y}`;
+    }
+    
+    return path;
+  }
+
+  clearAllDrawings(): void {
+    this.planningService.clearAllDrawings();
+  }
+
+  deleteDrawing(strokeId: string): void {
+    this.planningService.deleteDrawingStroke(strokeId);
   }
 }

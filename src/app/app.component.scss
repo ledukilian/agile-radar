@@ -27,9 +27,9 @@
   }
   
   &.active {
-    background: linear-gradient(135deg, rgba(251, 146, 60, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%);
-    color: #f59e0b;
-    box-shadow: 0 0 20px rgba(251, 146, 60, 0.15);
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.2) 0%, rgba(71, 85, 105, 0.15) 100%);
+    color: #475569;
+    box-shadow: 0 0 20px rgba(100, 116, 139, 0.15);
   }
 }
 
@@ -45,8 +45,8 @@
   }
   
   &.active {
-    background: linear-gradient(135deg, rgba(251, 146, 60, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%);
-    border-color: rgba(251, 146, 60, 0.4);
-    color: #f59e0b;
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.2) 0%, rgba(71, 85, 105, 0.15) 100%);
+    border-color: rgba(100, 116, 139, 0.4);
+    color: #475569;
   }
 }

@@ -1,14 +1,16 @@
 <div
   #sprintElement
-  class="sprint-card absolute glass-card rounded-xl overflow-hidden"
+  class="sprint-card absolute rounded-xl overflow-visible"
   [class]="statusClass"
-  [style.left.px]="sprint.position.x"
-  [style.top.px]="sprint.position.y"
-  [style.width.px]="sprint.width"
-  [style.height.px]="sprint.height"
+  [class.is-dragging]="isDragging"
+  [class.is-resizing]="isResizing"
+  [style.left.px]="displayX"
+  [style.top.px]="displayY"
+  [style.width.px]="displayWidth"
+  [style.height.px]="displayHeight"
 >
   <!-- Header -->
-  <div class="sprint-header px-3 py-2 cursor-move flex items-center justify-between border-b border-white/10">
+  <div class="sprint-header px-3 py-2 cursor-move flex items-center justify-between rounded-t-xl">
     <div class="flex items-center gap-2 flex-1 min-w-0">
       <!-- Icône sprint -->
       <span class="text-lg shrink-0">🏁</span>
@@ -65,7 +67,7 @@
 
       <!-- Badge status -->
       <span 
-        *ngIf="sprintInfo && sprintInfo.status !== 'empty'"
+        *ngIf="sprint.capacity && sprintInfo && sprintInfo.status !== 'empty'"
         class="status-badge text-[10px] font-medium px-1.5 py-0.5 rounded-full"
         [ngClass]="{
           'status-overloaded-badge': sprintInfo.status === 'overloaded',
@@ -103,6 +105,7 @@
         <button 
           (click)="toggleSettings()" 
           class="p-1 text-glass-muted hover:text-glass-secondary transition-colors"
+          [class.cursor-pointer]="showSettings"
           title="Paramètres"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,7 +174,7 @@
   </div>
 
   <!-- Barre de charge (seulement si capacité définie) -->
-  <div class="load-bar h-1.5 bg-black/20" *ngIf="sprint.capacity">
+  <div class="load-bar" *ngIf="sprint.capacity">
     <div 
       class="h-full transition-all duration-300"
       [class]="loadBarClass"
@@ -192,30 +195,15 @@
     <span *ngIf="sprint.endDate">{{ sprint.endDate }}</span>
   </div>
 
-  <!-- Zone de contenu (items) - Positionnement libre -->
-  <div #contentArea class="sprint-content flex-1 relative overflow-hidden">
-    <!-- Items avec positionnement absolu -->
-    <app-planning-item-card
-      *ngFor="let item of items; trackBy: trackByItem"
-      [estimation]="item.estimation"
-      [position]="item.position.position"
-      [compact]="true"
-      [inSprint]="true"
-      [isCreatingDependency]="isCreatingDependency"
-      [isSelected]="dependencySource === item.estimation.id"
-      (moved)="onItemMoved(item.estimation.id, $event)"
-      (removed)="onItemRemoved(item.estimation.id, $any($event))"
-      (startDependency)="onStartDependency($event)"
-      (selectAsTarget)="onSelectAsTarget($event)"
-    ></app-planning-item-card>
-
-    <!-- Message si vide -->
+  <!-- Zone de contenu (transparente pour permettre aux items de passer au travers) -->
+  <div class="sprint-content flex-1 relative pointer-events-none">
+    <!-- Indicateur si vide -->
     <div 
-      *ngIf="items.length === 0"
-      class="empty-sprint absolute inset-0 flex items-center justify-center text-glass-muted text-sm pointer-events-none"
+      *ngIf="sprintInfo && sprintInfo.itemCount === 0"
+      class="absolute inset-0 flex items-center justify-center text-glass-muted text-sm"
     >
-      <div class="text-center">
-        <span class="opacity-60">Glissez des éléments ici</span>
+      <div class="text-center opacity-40">
+        <span>Glissez des éléments ici</span>
       </div>
     </div>
   </div>

@@ -115,7 +115,7 @@
             <p *ngIf="showDateTime || getChildUserStories(feature.id).length > 0" class="text-[10px] text-glass-muted truncate">
               <span *ngIf="showDateTime">{{ formatDate(feature.updatedAt) }}</span>
               <span *ngIf="getChildUserStories(feature.id).length > 0" [class.ml-1]="showDateTime">
-                <span *ngIf="showDateTime">·</span> {{ getChildUserStories(feature.id).length }} US
+                <span *ngIf="showDateTime">·</span> {{ getChildUserStories(feature.id).length }} {{ getChildUserStories(feature.id).length === 1 ? 'User Story' : 'User Stories' }}
               </span>
             </p>
           </div>

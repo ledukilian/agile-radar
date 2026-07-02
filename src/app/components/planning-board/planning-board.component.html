@@ -4,10 +4,12 @@
     #boardContainer
     class="board-canvas absolute inset-0"
     [class.creating-dependency]="isCreatingDependency"
-    (mousedown)="onPanStart($event)"
-    (mousemove)="onPanMove($event)"
-    (mouseup)="onPanEnd($event)"
-    (mouseleave)="onPanEnd($event)"
+    [class.drawing-mode]="isDrawingMode && !isEraserMode"
+    [class.eraser-mode]="isDrawingMode && isEraserMode"
+    (mousedown)="isDrawingMode && !isEraserMode ? onDrawingStart($event) : onPanStart($event)"
+    (mousemove)="isDrawingMode && !isEraserMode ? onDrawingMove($event) : onPanMove($event)"
+    (mouseup)="isDrawingMode && !isEraserMode ? onDrawingEnd($event) : onPanEnd($event)"
+    (mouseleave)="isDrawingMode && !isEraserMode ? onDrawingEnd($event) : onPanEnd($event)"
   >
     <!-- Grille de fond -->
     <div 
@@ -34,37 +36,70 @@
         ></g>
       </svg>
 
-      <!-- Sprints -->
+      <!-- Sprints (zones visuelles) -->
       <app-sprint-card
         *ngFor="let sprint of board.sprints; trackBy: trackBySprint"
         [sprint]="sprint"
         [sprintInfo]="getSprintInfo(sprint.id)"
-        [items]="getItemsInSprint(sprint.id)"
-        [isCreatingDependency]="isCreatingDependency"
-        [dependencySource]="dependencySource"
         (moved)="onSprintMoved(sprint.id, $event)"
         (resized)="onSprintResized(sprint.id, $event)"
         (updated)="onSprintUpdated(sprint.id, $event)"
         (deleted)="onSprintDeleted(sprint.id)"
-        (itemMoved)="onItemMoved($event.id, $event.position)"
-        (itemRemoved)="onItemRemovedFromSprint($event.id, $event.dropPosition)"
-        (itemDropped)="onItemDroppedOnSprint($event.id, sprint.id, $event.localPosition)"
-        (startDependency)="startCreatingDependency($event)"
-        (selectDependencyTarget)="onDependencyTargetSelected($event)"
       ></app-sprint-card>
 
-      <!-- Items hors sprints -->
+      <!-- Tous les items (positionnés de manière absolue) -->
       <app-planning-item-card
-        *ngFor="let item of getItemsOutsideSprints(); trackBy: trackByPosition"
+        *ngFor="let item of getAllItems(); trackBy: trackByPosition"
         [estimation]="item.estimation"
         [position]="item.position.position"
         [isCreatingDependency]="isCreatingDependency"
         [isSelected]="dependencySource === item.estimation.id"
+        [showMetrics]="showMetrics"
         (moved)="onItemMoved(item.estimation.id, $event)"
         (removed)="onItemRemovedFromBoard(item.estimation.id)"
         (startDependency)="startCreatingDependency($event)"
         (selectAsTarget)="onDependencyTargetSelected($event)"
       ></app-planning-item-card>
+
+      <!-- Sticky Notes (Post-its) -->
+      <app-sticky-note-card
+        *ngFor="let note of board.stickyNotes; trackBy: trackByStickyNote"
+        [note]="note"
+        (moved)="onStickyNoteMoved(note.id, $event)"
+        (resized)="onStickyNoteResized(note.id, $event)"
+        (updated)="onStickyNoteUpdated(note.id, $event)"
+        (deleted)="onStickyNoteDeleted(note.id)"
+      ></app-sticky-note-card>
+
+      <!-- Dessins (SVG layer) -->
+      <svg class="drawings-layer absolute inset-0 w-full h-full" [class.pointer-events-none]="!isEraserMode" style="overflow: visible;">
+        <!-- Dessins sauvegardés -->
+        <path
+          *ngFor="let stroke of board.drawings; trackBy: trackByDrawing"
+          [attr.d]="getStrokePath(stroke.points)"
+          [attr.stroke]="stroke.color"
+          [attr.stroke-width]="stroke.thickness"
+          fill="none"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          [class.eraser-target]="isEraserMode"
+          [style.cursor]="isEraserMode ? 'pointer' : 'default'"
+          [style.pointer-events]="isEraserMode ? 'stroke' : 'none'"
+          (click)="isEraserMode && deleteDrawing(stroke.id)"
+        />
+        <!-- Dessin en cours -->
+        <path
+          *ngIf="isCurrentlyDrawing && currentStroke.length > 1"
+          [attr.d]="getStrokePath(currentStroke)"
+          [attr.stroke]="drawingSettings.color"
+          [attr.stroke-width]="drawingSettings.thickness"
+          fill="none"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          opacity="0.8"
+          class="pointer-events-none"
+        />
+      </svg>
     </div>
 
     <!-- Message si vide -->
@@ -84,13 +119,45 @@
     <!-- Indicateur mode dépendance -->
     <div 
       *ngIf="isCreatingDependency"
-      class="mode-indicator absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg flex items-center gap-2 z-50"
+      class="mode-indicator absolute top-4 left-1/2 -translate-x-1/2 bg-slate-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg flex items-center gap-2 z-50"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
       </svg>
       Cliquez sur l'élément cible de la dépendance
-      <button (click)="cancelCreatingDependency()" class="ml-2 hover:bg-amber-600 p-1 rounded">
+      <button (click)="cancelCreatingDependency()" class="ml-2 hover:bg-slate-700 p-1 rounded">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Indicateur mode dessin -->
+    <div 
+      *ngIf="isDrawingMode && !isEraserMode"
+      class="mode-indicator absolute top-4 left-1/2 -translate-x-1/2 bg-purple-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg flex items-center gap-2 z-50"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+      </svg>
+      Mode dessin - Dessinez librement
+      <button (click)="toggleDrawingMode()" class="ml-2 hover:bg-purple-600 p-1 rounded">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    
+    <!-- Indicateur mode gomme -->
+    <div 
+      *ngIf="isDrawingMode && isEraserMode"
+      class="mode-indicator absolute top-4 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg flex items-center gap-2 z-50"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+      Mode gomme - Cliquez sur un trait pour l'effacer
+      <button (click)="toggleDrawingMode()" class="ml-2 hover:bg-red-600 p-1 rounded">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
@@ -119,36 +186,264 @@
     </button>
   </nav>
 
-  <!-- Sidebar gauche (flottante) -->
-  <app-planning-sidebar
-    *ngIf="showSidebar"
-    class="floating-sidebar absolute left-4 top-20 bottom-20 z-20 rounded-xl overflow-hidden"
-    [isCreatingDependency]="isCreatingDependency"
-    (itemDropped)="onItemAddedToBoard($event.estimationId, $event.position)"
-    style="width: clamp(260px, 18vw, 380px);"
-  ></app-planning-sidebar>
+  <!-- Panel flottant gauche (Backlog, Sprint ou Conseils) -->
+  <div 
+    *ngIf="activePanel"
+    class="floating-panel absolute left-4 top-20 bottom-20 z-20 rounded-xl overflow-hidden shadow-xl"
+    style="width: clamp(280px, 20vw, 400px);"
+  >
+    <!-- Backlog -->
+    <app-planning-sidebar
+      *ngIf="activePanel === 'backlog'"
+      class="h-full"
+      [isCreatingDependency]="isCreatingDependency"
+      (itemDropped)="onItemAddedToBoard($event.estimationId, $event.position)"
+    ></app-planning-sidebar>
 
-  <!-- Panel recommandations (flottant à droite) -->
-  <app-planning-recommendations
-    *ngIf="showRecommendations"
-    class="floating-recommendations absolute right-4 top-20 bottom-20 z-20 shadow-xl rounded-xl overflow-hidden"
-    (close)="showRecommendations = false"
-  ></app-planning-recommendations>
+    <!-- Sprint Summary -->
+    <div *ngIf="activePanel === 'sprint'" class="sprint-summary-panel glass-card h-full flex flex-col">
+      <!-- Header -->
+      <div class="panel-header px-4 py-3 border-b border-white/10">
+        <h2 class="text-sm font-semibold text-glass-primary flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+          Récapitulatif Sprint
+        </h2>
+        <p class="text-xs text-glass-muted mt-0.5">
+          {{ getTotalPlannedItems() }} élément(s) sur {{ board.sprints.length }} sprint(s)
+        </p>
+      </div>
+
+      <!-- Liste des sprints avec leurs éléments -->
+      <div class="flex-1 overflow-y-auto p-2 space-y-3">
+        <!-- Message si aucun sprint -->
+        <div 
+          *ngIf="board.sprints.length === 0"
+          class="text-center py-8 text-glass-muted"
+        >
+          <span class="text-3xl block mb-2">🏁</span>
+          <p class="text-sm">Aucun sprint créé</p>
+          <p class="text-xs mt-1">Créez un sprint pour commencer</p>
+        </div>
+
+        <!-- Sprints -->
+        <div 
+          *ngFor="let sprint of board.sprints; trackBy: trackBySprint"
+          class="sprint-group rounded-lg overflow-hidden border border-white/10"
+        >
+          <!-- Sprint header -->
+          <div 
+            class="sprint-group-header px-3 py-2 flex items-center justify-between cursor-pointer"
+            [ngClass]="{
+              'sprint-status-overloaded': getSprintInfo(sprint.id)?.status === 'overloaded',
+              'sprint-status-warning': getSprintInfo(sprint.id)?.status === 'at-risk' || getSprintInfo(sprint.id)?.status === 'warning',
+              'sprint-status-balanced': getSprintInfo(sprint.id)?.status === 'balanced',
+              'sprint-status-empty': !getSprintInfo(sprint.id) || getSprintInfo(sprint.id)?.status === 'empty'
+            }"
+            (click)="focusOnSprint(sprint)"
+          >
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-base">🏁</span>
+              <span class="text-xs font-medium text-glass-primary truncate">{{ sprint.name }}</span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-[10px] text-glass-muted tabular-nums">
+                {{ getSprintInfo(sprint.id)?.usedPoints || 0 }}<span *ngIf="sprint.capacity">/{{ sprint.capacity }}</span> pts
+              </span>
+              <span class="text-[10px] text-glass-muted">
+                ({{ getSprintInfo(sprint.id)?.itemCount || 0 }})
+              </span>
+            </div>
+          </div>
+
+          <!-- Sprint items -->
+          <div class="sprint-group-items px-2 py-1 space-y-1">
+            <div 
+              *ngIf="getItemsInSprint(sprint.id).length === 0"
+              class="text-[10px] text-glass-muted py-2 text-center italic"
+            >
+              Aucun élément
+            </div>
+            
+            <div 
+              *ngFor="let item of getItemsInSprint(sprint.id)"
+              class="sprint-item flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer"
+              (click)="focusOnItem(item.estimation.id)"
+            >
+              <span class="text-sm shrink-0">{{ item.estimation.type === 'feature' ? '⭐' : '🧩' }}</span>
+              <span class="text-[11px] text-glass-primary truncate flex-1">{{ item.estimation.name }}</span>
+              <span 
+                class="px-1.5 py-0.5 text-[10px] font-medium rounded shrink-0"
+                [ngClass]="[getTShirtSize(item.estimation).bgColor, getTShirtSize(item.estimation).textColor]"
+              >
+                {{ getEstimationPoints(item.estimation) }} pts
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Éléments non assignés à un sprint (sur le board mais hors sprint) -->
+        <div 
+          *ngIf="getUnassignedItems().length > 0"
+          class="sprint-group rounded-lg overflow-hidden border border-white/10 border-dashed"
+        >
+          <div class="sprint-group-header px-3 py-2 flex items-center justify-between">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-base">📌</span>
+              <span class="text-xs font-medium text-glass-muted">Hors sprint</span>
+            </div>
+            <span class="text-[10px] text-glass-muted">({{ getUnassignedItems().length }})</span>
+          </div>
+          <div class="sprint-group-items px-2 py-1 space-y-1">
+            <div 
+              *ngFor="let item of getUnassignedItems()"
+              class="sprint-item flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer"
+              (click)="focusOnItem(item.estimation.id)"
+            >
+              <span class="text-sm shrink-0">{{ item.estimation.type === 'feature' ? '⭐' : '🧩' }}</span>
+              <span class="text-[11px] text-glass-primary truncate flex-1">{{ item.estimation.name }}</span>
+              <span 
+                class="px-1.5 py-0.5 text-[10px] font-medium rounded shrink-0"
+                [ngClass]="[getTShirtSize(item.estimation).bgColor, getTShirtSize(item.estimation).textColor]"
+              >
+                {{ getEstimationPoints(item.estimation) }} pts
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer avec stats -->
+      <div class="panel-footer px-3 py-2 border-t border-white/10 text-[10px] text-glass-muted">
+        <div class="flex items-center justify-between">
+          <span>Total planifié: {{ getTotalPlannedPoints() }} pts</span>
+          <span>{{ getTotalPlannedItems() }} éléments</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommendations -->
+    <app-planning-recommendations
+      *ngIf="activePanel === 'recommendations'"
+      class="h-full"
+      (close)="activePanel = null"
+    ></app-planning-recommendations>
+  </div>
+
+  <!-- Barre d'outils dessin (au dessus de la toolbar principale) -->
+  <div 
+    *ngIf="isDrawingMode"
+    class="drawing-toolbar absolute bottom-16 left-1/2 -translate-x-1/2 z-30 glass-card rounded-xl shadow-lg px-4 py-2 flex items-center gap-3"
+  >
+    <!-- Outil crayon -->
+    <button
+      (click)="isEraserMode = false"
+      class="drawing-tool-btn"
+      [class.active]="!isEraserMode"
+      title="Crayon"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+      </svg>
+    </button>
+    
+    <!-- Outil gomme -->
+    <button
+      (click)="toggleEraserMode()"
+      class="drawing-tool-btn"
+      [class.active]="isEraserMode"
+      title="Gomme (cliquez sur un trait pour l'effacer)"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+    </button>
+    
+    <!-- Séparateur -->
+    <div class="w-px h-6 bg-white/20"></div>
+    
+    <!-- Couleurs -->
+    <div class="flex items-center gap-1">
+      <button
+        *ngFor="let color of ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#000000', '#ffffff']"
+        (click)="setDrawingColor(color)"
+        class="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+        [style.backgroundColor]="color"
+        [style.borderColor]="drawingSettings.color === color && !isEraserMode ? '#000' : (color === '#ffffff' ? '#ccc' : 'transparent')"
+        [title]="color"
+      ></button>
+    </div>
+    
+    <!-- Séparateur -->
+    <div class="w-px h-6 bg-white/20"></div>
+    
+    <!-- Épaisseur -->
+    <div class="flex items-center gap-2">
+      <span class="text-xs text-glass-muted">{{ drawingSettings.thickness }}px</span>
+      <input
+        type="range"
+        [value]="drawingSettings.thickness"
+        (input)="setDrawingThickness($any($event.target).value)"
+        min="1"
+        max="20"
+        class="w-20 h-2 bg-white/20 rounded-lg appearance-none cursor-pointer drawing-thickness-slider"
+      />
+    </div>
+    
+    <!-- Séparateur -->
+    <div class="w-px h-6 bg-white/20"></div>
+    
+    <!-- Effacer tout -->
+    <button
+      (click)="clearAllDrawings()"
+      class="drawing-tool-btn text-red-400 hover:text-red-300"
+      title="Effacer tous les dessins"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+    </button>
+  </div>
 
   <!-- Toolbar en bas (style footer) -->
   <div class="toolbar-bottom absolute bottom-0 left-0 right-0 z-30 flex items-center justify-between py-3 px-4">
-    <!-- Gauche : Toggle Backlog -->
-    <div class="toolbar toolbar-left glass-card flex items-center gap-2 px-3 py-2 rounded-xl shadow-lg">
+    <!-- Gauche : Navigation panels (Backlog, Sprint, Conseils) -->
+    <div class="toolbar toolbar-left glass-card flex items-center gap-1 px-2 py-1.5 rounded-xl shadow-lg">
       <button
-        (click)="toggleSidebar()"
-        class="toolbar-btn flex items-center gap-1.5"
-        [class.active]="showSidebar"
-        title="Afficher/Masquer le backlog"
+        (click)="setActivePanel('backlog')"
+        class="panel-nav-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all"
+        [class.active]="activePanel === 'backlog'"
+        title="Backlog - Éléments non planifiés"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
-        <span class="text-sm hidden sm:inline">Backlog</span>
+        <span class="text-xs font-medium hidden sm:inline">Backlog</span>
+      </button>
+      
+      <button
+        (click)="setActivePanel('sprint')"
+        class="panel-nav-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all"
+        [class.active]="activePanel === 'sprint'"
+        title="Sprint - Récapitulatif des éléments planifiés"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>
+        <span class="text-xs font-medium hidden sm:inline">Sprint</span>
+      </button>
+      
+      <button
+        (click)="setActivePanel('recommendations')"
+        class="panel-nav-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all"
+        [class.active]="activePanel === 'recommendations'"
+        title="Conseils - Recommandations de planification"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+        <span class="text-xs font-medium hidden sm:inline">Conseils</span>
       </button>
     </div>
 
@@ -159,6 +454,7 @@
         <button
           (click)="showAddMenu = !showAddMenu"
           class="toolbar-btn flex items-center gap-1"
+          [class.cursor-pointer]="showAddMenu"
           title="Ajouter un élément"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,7 +486,50 @@
             <span class="text-base">🏁</span>
             Nouveau sprint
           </button>
+          <button
+            (click)="createQuickStickyNote(); showAddMenu = false"
+            class="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+          >
+            <span class="text-base">📝</span>
+            Nouveau post-it
+          </button>
         </div>
+      </div>
+
+      <!-- Bouton mode dessin -->
+      <button
+        (click)="toggleDrawingMode()"
+        class="toolbar-btn toolbar-toggle"
+        [class.active]="isDrawingMode"
+        title="Mode dessin"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+        </svg>
+      </button>
+
+      <!-- Séparateur -->
+      <div class="w-px h-6 bg-white/20 mx-1"></div>
+
+      <!-- Zoom controls (groupe unifié) -->
+      <div class="flex items-center gap-0">
+        <button (click)="zoomOut()" class="toolbar-btn rounded-l-lg rounded-r-none" title="Zoom arrière">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+          </svg>
+        </button>
+        <button 
+          (click)="resetZoom()" 
+          class="toolbar-btn rounded-none px-2 min-w-[60px] text-center border-l border-r border-white/10"
+          title="Réinitialiser le zoom"
+        >
+          <span class="text-sm font-medium">{{ (board.zoom * 100) | number:'1.0-0' }}%</span>
+        </button>
+        <button (click)="zoomIn()" class="toolbar-btn rounded-l-none rounded-r-lg" title="Zoom avant">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+          </svg>
+        </button>
       </div>
 
       <!-- Séparateur -->
@@ -199,7 +538,7 @@
       <!-- Toggle Grille -->
       <button
         (click)="toggleGrid()"
-        class="toolbar-btn"
+        class="toolbar-btn toolbar-toggle"
         [class.active]="board.gridEnabled"
         title="Activer/Désactiver la grille"
       >
@@ -208,44 +547,43 @@
         </svg>
       </button>
 
+      <!-- Toggle Metrics (T-shirt + Points) -->
+      <button
+        (click)="toggleMetrics()"
+        class="toolbar-btn toolbar-toggle"
+        [class.active]="showMetrics"
+        title="Afficher/Masquer taille et points"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+        </svg>
+      </button>
+
       <!-- Séparateur -->
       <div class="w-px h-6 bg-white/20 mx-1"></div>
 
-      <!-- Zoom controls -->
-      <button (click)="zoomOut()" class="toolbar-btn" title="Zoom arrière">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
-        </svg>
-      </button>
-      
-      <button 
-        (click)="resetZoom()" 
-        class="toolbar-btn px-2 min-w-[60px] text-center"
-        title="Réinitialiser le zoom"
+      <!-- Toggle Features -->
+      <button
+        (click)="toggleFeatures()"
+        class="toolbar-btn toolbar-toggle"
+        [class.active]="showFeatures"
+        title="Afficher/Masquer les features"
       >
-        <span class="text-sm font-medium">{{ (board.zoom * 100) | number:'1.0-0' }}%</span>
+        <span class="toggle-icon">⭐</span>
       </button>
-      
-      <button (click)="zoomIn()" class="toolbar-btn" title="Zoom avant">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-        </svg>
+
+      <!-- Toggle User Stories -->
+      <button
+        (click)="toggleUserStories()"
+        class="toolbar-btn toolbar-toggle"
+        [class.active]="showUserStories"
+        title="Afficher/Masquer les user stories"
+      >
+        <span class="toggle-icon">🧩</span>
       </button>
     </div>
 
-    <!-- Droite : Toggle Conseils -->
-    <div class="toolbar toolbar-right glass-card flex items-center gap-2 px-3 py-2 rounded-xl shadow-lg">
-      <button
-        (click)="toggleRecommendations()"
-        class="toolbar-btn flex items-center gap-1.5"
-        [class.active]="showRecommendations"
-        title="Afficher/Masquer les conseils"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-        </svg>
-        <span class="text-sm hidden sm:inline">Conseils</span>
-      </button>
-    </div>
+    <!-- Droite : Espace vide pour équilibrer la layout -->
+    <div class="toolbar-right-spacer" style="width: 180px;"></div>
   </div>
 </div>

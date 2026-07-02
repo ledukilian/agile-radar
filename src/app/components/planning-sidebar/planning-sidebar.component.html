@@ -1,4 +1,4 @@
-<div class="sidebar glass-card h-full flex flex-col w-full border-r border-white/10">
+<div class="sidebar glass-card h-full flex flex-col w-full">
   <!-- Header -->
   <div class="sidebar-header px-4 py-3 border-b border-white/10">
     <h2 class="text-sm font-semibold text-glass-primary flex items-center gap-2">
@@ -32,24 +32,24 @@
     <div class="flex gap-1">
       <button
         (click)="typeFilter = 'all'; onFilterChange()"
-        class="flex-1 px-2 py-1 text-xs rounded-md transition-all filter-btn"
-        [ngClass]="{'bg-blue-500 text-white': typeFilter === 'all', 'text-glass-muted': typeFilter !== 'all'}"
+        class="flex-1 px-2 py-1 text-xs rounded-lg transition-all filter-btn"
+        [class.active]="typeFilter === 'all'"
       >
         Tous
       </button>
       <button
         (click)="typeFilter = 'feature'; onFilterChange()"
-        class="flex-1 px-2 py-1 text-xs rounded-md transition-all flex items-center justify-center gap-1 filter-btn"
-        [ngClass]="{'bg-amber-500 text-white': typeFilter === 'feature', 'text-glass-muted': typeFilter !== 'feature'}"
+        class="flex-1 px-2 py-1 text-xs rounded-lg transition-all flex items-center justify-center gap-1 filter-btn"
+        [class.active]="typeFilter === 'feature'"
       >
         <span>⭐</span> Features
       </button>
       <button
         (click)="typeFilter = 'user-story'; onFilterChange()"
-        class="flex-1 px-2 py-1 text-xs rounded-md transition-all flex items-center justify-center gap-1 filter-btn"
-        [ngClass]="{'bg-indigo-500 text-white': typeFilter === 'user-story', 'text-glass-muted': typeFilter !== 'user-story'}"
+        class="flex-1 px-2 py-1 text-xs rounded-lg transition-all flex items-center justify-center gap-1 filter-btn"
+        [class.active]="typeFilter === 'user-story'"
       >
-        <span>🧩</span> US
+        <span>🧩</span> User Story
       </button>
     </div>
   </div>

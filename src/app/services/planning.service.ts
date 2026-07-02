@@ -9,8 +9,12 @@ import {
   SprintInfo,
   SprintStatus,
   PlanningRecommendation,
+  StickyNote,
+  DrawingStroke,
   DEFAULT_BOARD,
-  DEFAULT_SPRINT
+  DEFAULT_SPRINT,
+  DEFAULT_STICKY_NOTE,
+  STICKY_NOTE_COLORS
 } from '../models/planning.model';
 import { EstimationService } from './estimation.service';
 import { SettingsService } from './settings.service';
@@ -141,19 +145,12 @@ export class PlanningService {
   }
 
   /**
-   * Supprime un sprint et libère ses éléments
+   * Supprime un sprint (les éléments restent à leur position)
    */
   deleteSprint(id: string): void {
     const board = this.boardSubject.value;
-    
-    // Retirer les éléments du sprint (les remettre sans sprintId)
-    const positions = board.positions.map(pos => 
-      pos.sprintId === id ? { ...pos, sprintId: undefined } : pos
-    );
-
     this.updateBoard({
-      sprints: board.sprints.filter(s => s.id !== id),
-      positions
+      sprints: board.sprints.filter(s => s.id !== id)
     });
   }
 
@@ -176,13 +173,12 @@ export class PlanningService {
   /**
    * Ajoute ou met à jour la position d'un élément sur le board
    */
-  setPosition(estimationId: string, position: { x: number; y: number }, sprintId?: string): void {
+  setPosition(estimationId: string, position: { x: number; y: number }): void {
     const board = this.boardSubject.value;
     const existingIndex = board.positions.findIndex(p => p.estimationId === estimationId);
 
     const newPosition: PlanningPosition = {
       estimationId,
-      sprintId,
       position
     };
 
@@ -201,28 +197,7 @@ export class PlanningService {
    * Déplace un élément vers une nouvelle position
    */
   moveItem(estimationId: string, position: { x: number; y: number }): void {
-    const existing = this.getPosition(estimationId);
-    this.setPosition(estimationId, position, existing?.sprintId);
-  }
-
-  /**
-   * Assigne un élément à un sprint avec une position locale
-   */
-  assignToSprint(estimationId: string, sprintId: string, localPosition?: { x: number; y: number }): void {
-    const position = localPosition || { x: 20, y: 20 };
-    this.setPosition(estimationId, position, sprintId);
-  }
-
-  /**
-   * Retire un élément d'un sprint et le place sur le board
-   */
-  removeFromSprint(estimationId: string, newPosition?: { x: number; y: number }): void {
-    const existing = this.getPosition(estimationId);
-    if (existing) {
-      // Utiliser la nouvelle position fournie ou garder l'ancienne
-      const position = newPosition || existing.position;
-      this.setPosition(estimationId, position, undefined);
-    }
+    this.setPosition(estimationId, position);
   }
 
   /**
@@ -239,10 +214,42 @@ export class PlanningService {
   }
 
   /**
-   * Retourne les éléments d'un sprint
+   * Vérifie si une position est à l'intérieur d'un sprint (basé sur le centre de l'item)
+   */
+  isPositionInSprint(position: { x: number; y: number }, sprint: Sprint, itemWidth = 120, itemHeight = 80): boolean {
+    // Calculer le centre de l'item
+    const centerX = position.x + itemWidth / 2;
+    const centerY = position.y + itemHeight / 2;
+    
+    // Zone du sprint (avec une marge pour le header)
+    const sprintHeaderHeight = 50;
+    const sprintLeft = sprint.position.x;
+    const sprintTop = sprint.position.y + sprintHeaderHeight;
+    const sprintRight = sprint.position.x + sprint.width;
+    const sprintBottom = sprint.position.y + sprint.height;
+    
+    return centerX >= sprintLeft && centerX <= sprintRight &&
+           centerY >= sprintTop && centerY <= sprintBottom;
+  }
+
+  /**
+   * Trouve le sprint qui contient une position donnée
+   */
+  findSprintAtPosition(position: { x: number; y: number }): Sprint | null {
+    const sprints = this.boardSubject.value.sprints;
+    return sprints.find(sprint => this.isPositionInSprint(position, sprint)) || null;
+  }
+
+  /**
+   * Retourne les éléments d'un sprint (détection par zone)
    */
   getSprintItems(sprintId: string): Estimation[] {
-    const positions = this.boardSubject.value.positions.filter(p => p.sprintId === sprintId);
+    const sprint = this.getSprint(sprintId);
+    if (!sprint) return [];
+    
+    const positions = this.boardSubject.value.positions.filter(p => 
+      this.isPositionInSprint(p.position, sprint)
+    );
     const estimations = this.estimationService.getAllEstimations();
     
     return positions
@@ -251,13 +258,45 @@ export class PlanningService {
   }
 
   /**
-   * Retourne les éléments d'un sprint avec leurs positions
+   * Retourne les éléments d'un sprint avec leurs positions (détection par zone)
    */
   getSprintItemsWithPositions(sprintId: string): { estimation: Estimation; position: PlanningPosition }[] {
-    const positions = this.boardSubject.value.positions.filter(p => p.sprintId === sprintId);
+    const sprint = this.getSprint(sprintId);
+    if (!sprint) return [];
+    
+    const positions = this.boardSubject.value.positions.filter(p => 
+      this.isPositionInSprint(p.position, sprint)
+    );
     const estimations = this.estimationService.getAllEstimations();
     
     return positions
+      .map(p => {
+        const estimation = estimations.find(e => e.id === p.estimationId);
+        return estimation ? { estimation, position: p } : null;
+      })
+      .filter((item): item is { estimation: Estimation; position: PlanningPosition } => item !== null);
+  }
+
+  /**
+   * Retourne le sprint qui contient un élément donné
+   */
+  getSprintForItem(estimationId: string): string | null {
+    const position = this.getPosition(estimationId);
+    if (!position) return null;
+    
+    const sprint = this.findSprintAtPosition(position.position);
+    return sprint?.id || null;
+  }
+
+  /**
+   * Retourne les éléments qui ne sont dans aucun sprint
+   */
+  getItemsOutsideSprints(): { estimation: Estimation; position: PlanningPosition }[] {
+    const board = this.boardSubject.value;
+    const estimations = this.estimationService.getAllEstimations();
+    
+    return board.positions
+      .filter(p => !this.findSprintAtPosition(p.position))
       .map(p => {
         const estimation = estimations.find(e => e.id === p.estimationId);
         return estimation ? { estimation, position: p } : null;
@@ -367,12 +406,16 @@ export class PlanningService {
     // Si les deux ne sont pas planifiés, on considère la dépendance comme non résolue
     if (!sourcePos || !targetPos) return false;
 
+    // Trouver les sprints contenant chaque élément
+    const sourceSprint = this.findSprintAtPosition(sourcePos.position);
+    const targetSprint = this.findSprintAtPosition(targetPos.position);
+
     // Si dans le même sprint ou pas dans un sprint, on considère OK
-    if (sourcePos.sprintId === targetPos.sprintId) return true;
+    if (sourceSprint?.id === targetSprint?.id) return true;
 
     // Sinon, il faudrait comparer l'ordre des sprints (basé sur les dates)
-    // Pour simplifier, on considère résolu si les deux sont dans des sprints différents
-    return sourcePos.sprintId !== undefined && targetPos.sprintId !== undefined;
+    // Pour simplifier, on considère résolu si les deux sont dans des sprints
+    return sourceSprint !== null && targetSprint !== null;
   }
 
   // ==================== CALCULS SPRINT ====================
@@ -555,6 +598,128 @@ export class PlanningService {
     return recommendations;
   }
 
+  // ==================== STICKY NOTES ====================
+
+  /**
+   * Retourne tous les sticky notes
+   */
+  getStickyNotes(): StickyNote[] {
+    return this.boardSubject.value.stickyNotes || [];
+  }
+
+  /**
+   * Retourne un sticky note par son ID
+   */
+  getStickyNote(id: string): StickyNote | undefined {
+    return (this.boardSubject.value.stickyNotes || []).find(s => s.id === id);
+  }
+
+  /**
+   * Crée un nouveau sticky note
+   */
+  createStickyNote(note?: Partial<Omit<StickyNote, 'id' | 'createdAt' | 'updatedAt'>>): StickyNote {
+    const defaultColor = STICKY_NOTE_COLORS[0];
+    const newNote: StickyNote = {
+      ...DEFAULT_STICKY_NOTE,
+      position: { x: 200, y: 200 },
+      ...note,
+      id: this.generateId(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const board = this.boardSubject.value;
+    this.updateBoard({
+      stickyNotes: [...(board.stickyNotes || []), newNote]
+    });
+
+    return newNote;
+  }
+
+  /**
+   * Met à jour un sticky note existant
+   */
+  updateStickyNote(id: string, updates: Partial<Omit<StickyNote, 'id' | 'createdAt'>>): StickyNote | null {
+    const board = this.boardSubject.value;
+    const stickyNotes = board.stickyNotes || [];
+    const index = stickyNotes.findIndex(s => s.id === id);
+    
+    if (index === -1) return null;
+
+    const updatedNote = {
+      ...stickyNotes[index],
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    const newStickyNotes = [...stickyNotes];
+    newStickyNotes[index] = updatedNote;
+    
+    this.updateBoard({ stickyNotes: newStickyNotes });
+    return updatedNote;
+  }
+
+  /**
+   * Supprime un sticky note
+   */
+  deleteStickyNote(id: string): void {
+    const board = this.boardSubject.value;
+    this.updateBoard({
+      stickyNotes: (board.stickyNotes || []).filter(s => s.id !== id)
+    });
+  }
+
+  /**
+   * Déplace un sticky note
+   */
+  moveStickyNote(id: string, position: { x: number; y: number }): void {
+    this.updateStickyNote(id, { position });
+  }
+
+  // ==================== DRAWINGS ====================
+
+  /**
+   * Retourne tous les dessins
+   */
+  getDrawings(): DrawingStroke[] {
+    return this.boardSubject.value.drawings || [];
+  }
+
+  /**
+   * Ajoute un nouveau trait de dessin
+   */
+  addDrawingStroke(stroke: Omit<DrawingStroke, 'id' | 'createdAt'>): DrawingStroke {
+    const newStroke: DrawingStroke = {
+      ...stroke,
+      id: this.generateId(),
+      createdAt: new Date()
+    };
+
+    const board = this.boardSubject.value;
+    this.updateBoard({
+      drawings: [...(board.drawings || []), newStroke]
+    });
+
+    return newStroke;
+  }
+
+  /**
+   * Supprime un trait de dessin
+   */
+  deleteDrawingStroke(id: string): void {
+    const board = this.boardSubject.value;
+    this.updateBoard({
+      drawings: (board.drawings || []).filter(d => d.id !== id)
+    });
+  }
+
+  /**
+   * Supprime tous les dessins
+   */
+  clearAllDrawings(): void {
+    this.updateBoard({ drawings: [] });
+  }
+
   // ==================== PERSISTENCE ====================
 
   private getDefaultBoard(): PlanningBoard {
@@ -581,6 +746,24 @@ export class PlanningService {
           ...d,
           createdAt: new Date(d.createdAt)
         }));
+        // Migration: ajouter les nouvelles propriétés si elles n'existent pas
+        if (!board.stickyNotes) {
+          board.stickyNotes = [];
+        } else {
+          board.stickyNotes = board.stickyNotes.map((n: any) => ({
+            ...n,
+            createdAt: new Date(n.createdAt),
+            updatedAt: new Date(n.updatedAt)
+          }));
+        }
+        if (!board.drawings) {
+          board.drawings = [];
+        } else {
+          board.drawings = board.drawings.map((d: any) => ({
+            ...d,
+            createdAt: new Date(d.createdAt)
+          }));
+        }
         this.boardSubject.next(board);
       }
     } catch (error) {

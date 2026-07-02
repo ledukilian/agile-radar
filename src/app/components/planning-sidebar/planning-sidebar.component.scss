@@ -13,8 +13,19 @@
   }
 }
 
-.filter-btn:not(.bg-blue-500):not(.bg-amber-500):not(.bg-indigo-500):hover {
-  background: rgba(255, 255, 255, 0.1);
+.filter-btn {
+  color: var(--text-muted);
+  
+  &:hover {
+    background: var(--list-hover-bg);
+    color: var(--text-secondary);
+  }
+  
+  &.active {
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.15) 0%, rgba(71, 85, 105, 0.1) 100%);
+    color: #475569;
+    box-shadow: 0 0 15px rgba(100, 116, 139, 0.1);
+  }
 }
 
 .sidebar-item {
