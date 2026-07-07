@@ -1,0 +1,13 @@
+:host {
+  display: contents;
+}
+
+.sticky-note {
+  position: absolute;
+  z-index: 5;
+}
+
+.sticky-textarea::placeholder {
+  color: inherit;
+  opacity: 0.4;
+}

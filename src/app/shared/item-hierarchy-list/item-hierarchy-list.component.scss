@@ -1,0 +1,28 @@
+:host {
+  display: block;
+}
+
+.item-hierarchy-row {
+  --indent-step: 12px;
+  position: relative;
+}
+
+.item-hierarchy-row[data-depth]:not([data-depth='0']) {
+  margin-left: calc(var(--depth) * var(--indent-step));
+  padding-left: 8px;
+  border-left: 1px solid var(--divider);
+}
+
+.orphan-parent-hint {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 2px;
+  font-size: 9px;
+  color: var(--text-muted);
+
+  strong {
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+}

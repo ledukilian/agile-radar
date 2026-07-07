@@ -1,0 +1,40 @@
+<div class="backlog-panel glass-card rounded-xl flex flex-col h-full"
+  [class.drop-target]="isDropTarget"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave()"
+  (drop)="onDrop($event)">
+
+  <!-- Header -->
+  <div class="px-3 py-3 border-b glass-divider">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="text-sm font-semibold text-glass-primary">Backlog</h3>
+      <div class="relative">
+        <button (click)="toggleCreateMenu()" class="btn-accent rounded-lg px-2.5 py-1.5 text-xs inline-flex items-center gap-1.5">
+          <app-icon name="plus" [size]="13"></app-icon> Nouveau
+        </button>
+        <div *ngIf="showCreateMenu" class="create-menu glass-card rounded-lg p-1 absolute right-0 mt-1 z-20 w-44">
+          <button *ngFor="let t of types" (click)="onCreate(t)"
+            class="w-full text-left px-2 py-1.5 rounded text-sm text-glass-secondary hover:bg-white/5 flex items-center gap-2">
+            <app-icon [name]="typeMeta(t).icon" [color]="typeMeta(t).color" [size]="14"></app-icon>
+            {{ typeMeta(t).label }}
+          </button>
+        </div>
+      </div>
+    </div>
+    <input class="glass-input rounded-lg px-3 py-1.5 w-full text-sm" placeholder="Rechercher..."
+      [(ngModel)]="search" />
+  </div>
+
+  <!-- Liste -->
+  <div class="flex-1 overflow-y-auto p-2">
+    <app-item-hierarchy-list
+      [items]="filteredItems"
+      [containerIterationId]="null"
+      (open)="openItem.emit($event)">
+    </app-item-hierarchy-list>
+
+    <div *ngIf="filteredItems.length === 0" class="text-center text-[11px] text-glass-muted py-8">
+      Aucun élément dans le backlog
+    </div>
+  </div>
+</div>

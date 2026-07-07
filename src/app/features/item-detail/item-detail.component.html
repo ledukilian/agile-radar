@@ -1,0 +1,168 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm" style="background: rgba(17,17,17,0.5);"
+  (click)="onClose()">
+  <div *ngIf="item() as it" class="glass-card rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col animate-fade-in"
+    (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-5 py-3 border-b glass-divider">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-1 rounded"
+          [style.background]="typeMeta(it.type).color + '22'" [style.color]="typeMeta(it.type).color">
+          <app-icon [name]="typeMeta(it.type).icon" [size]="13"></app-icon> {{ typeMeta(it.type).label }}
+        </span>
+        <span class="text-xs text-glass-muted" *ngIf="schedule() as s">
+          <ng-container *ngIf="s.startIndex !== null">
+            Atterrissage : It. {{ s.startIndex + 1 }}<span *ngIf="s.landingIndex !== s.startIndex"> → {{ (s.landingIndex ?? 0) + 1 }}</span>
+          </ng-container>
+        </span>
+      </div>
+      <button (click)="onClose()" class="glass-btn rounded-lg w-9 h-9 flex items-center justify-center text-glass-secondary">
+        <app-icon name="close" [size]="16"></app-icon>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <!-- Titre & description -->
+      <div>
+        <input class="glass-input rounded-lg px-3 py-2 w-full text-base font-medium"
+          [ngModel]="it.title" (ngModelChange)="update({ title: $event })" placeholder="Titre de l'élément" />
+      </div>
+      <div>
+        <textarea rows="3" class="glass-input rounded-lg px-3 py-2 w-full text-sm resize-none"
+          [ngModel]="it.description" (ngModelChange)="update({ description: $event })"
+          placeholder="Description..."></textarea>
+      </div>
+
+      <div>
+        <label class="block text-xs text-glass-muted mb-1">Lien Jira</label>
+        <input class="glass-input rounded-lg px-3 py-2 w-full text-sm"
+          [ngModel]="it.jiraUrl || ''" (ngModelChange)="setJiraUrl($event)"
+          placeholder="https://jira.example.com/browse/PROJ-12345" />
+        <p *ngIf="jiraTicketKey(it.jiraUrl) as key" class="text-[11px] text-glass-muted mt-1">
+          Ticket détecté : <strong class="text-glass-secondary">{{ key }}</strong>
+        </p>
+      </div>
+
+      <!-- Type / Parent / Itération -->
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block text-xs text-glass-muted mb-1">Type</label>
+          <app-select [options]="typeOptions()" [value]="it.type" (valueChange)="setType($event)"></app-select>
+        </div>
+        <div>
+          <label class="block text-xs text-glass-muted mb-1">Parent</label>
+          <app-select [options]="parentOptions()" [value]="it.parentId || ''"
+            placeholder="— Aucun —" (valueChange)="setParent($event)"></app-select>
+        </div>
+        <div>
+          <label class="block text-xs text-glass-muted mb-1">Itération</label>
+          <app-select [options]="iterationOptions()" [value]="it.iterationId || ''"
+            placeholder="— Backlog —" (valueChange)="setIteration($event)"></app-select>
+        </div>
+      </div>
+
+      <!-- Points -->
+      <div class="glass-inner rounded-xl p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-medium text-glass-primary">Chiffrage (points)</span>
+          <span *ngIf="hasChildren()" class="text-[11px] px-2 py-1 rounded"
+            style="background: rgba(59,130,246,0.15); color:#3b82f6;">
+            Roll-up : {{ effectivePoints() }} pts ({{ children().length }} enfant(s))
+          </span>
+        </div>
+
+        <div *ngIf="!hasChildren()" class="flex items-center gap-1.5 flex-wrap">
+          <button *ngFor="let f of config.fibonacci" (click)="setPoints(f)"
+            class="fib-btn rounded-lg px-3 py-1.5 text-sm font-semibold"
+            [class.fib-active]="it.points === f">
+            {{ f }}
+          </button>
+        </div>
+        <div *ngIf="hasChildren()" class="text-xs text-glass-muted">
+          Les points sont calculés automatiquement à partir des enfants.
+        </div>
+
+        <!-- Aide radar -->
+        <div class="mt-3 pt-3 border-t glass-divider" *ngIf="!hasChildren()">
+          <button (click)="toggleRadar()" class="glass-btn rounded-lg px-3 py-1.5 text-xs">
+            {{ showRadar ? 'Masquer' : "Besoin d'aide ? Ouvrir le radar CURSE" }}
+          </button>
+
+          <div *ngIf="showRadar" class="mt-3 grid md:grid-cols-2 gap-4 items-center">
+            <div>
+              <div *ngFor="let axis of activeAxes" class="mb-2">
+                <div class="flex justify-between text-[11px] mb-0.5">
+                  <span [style.color]="axis.color">{{ axis.label }}</span>
+                  <span class="text-glass-muted">{{ curseValue(axis.key) }}</span>
+                </div>
+                <input type="range" min="0" max="100" step="5" class="w-full"
+                  [ngModel]="curseValue(axis.key)" (ngModelChange)="setCurse(axis.key, $event); computeSuggestion()" />
+              </div>
+              <div class="flex items-center gap-2 mt-2" *ngIf="suggestedPoints !== null">
+                <span class="text-xs text-glass-secondary">Suggestion : <strong>{{ suggestedPoints }} pts</strong></span>
+                <button (click)="applySuggestion()" class="rounded px-2 py-1 text-xs text-white"
+                  style="background:#3b82f6;">Appliquer</button>
+              </div>
+            </div>
+            <div>
+              <app-radar-chart [axes]="config.curseAxes" [scores]="it.curse"
+                [accentColor]="typeMeta(it.type).color"></app-radar-chart>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enfants -->
+      <div *ngIf="hasChildren()" class="glass-inner rounded-xl p-3">
+        <div class="text-sm font-medium text-glass-primary mb-2">Enfants</div>
+        <div class="space-y-1">
+          <button *ngFor="let c of children()" (click)="openItem.emit(c.id)"
+            class="w-full text-left glass-list-item rounded-lg px-2 py-1.5 text-sm flex items-center gap-2">
+            <app-icon [name]="typeMeta(c.type).icon" [color]="typeMeta(c.type).color" [size]="14"></app-icon>
+            <span class="flex-1 truncate text-glass-secondary">{{ c.title }}</span>
+            <span class="text-[11px] text-glass-muted">{{ c.points }} pts</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Dépendances -->
+      <div class="glass-inner rounded-xl p-3">
+        <div class="text-sm font-medium text-glass-primary mb-2">Dépendances</div>
+
+        <div class="space-y-1 mb-3" *ngIf="outgoingDeps().length || incomingDeps().length">
+          <div *ngFor="let d of outgoingDeps()" class="flex items-center gap-2 text-xs text-glass-secondary">
+            <span class="px-1.5 py-0.5 rounded" style="background: rgba(59,130,246,0.15); color:#3b82f6;">doit précéder</span>
+            <span class="flex-1 truncate">{{ itemTitle(d.targetId) }}</span>
+            <button (click)="removeDependency(d.id)" class="glass-btn rounded w-6 h-6 flex items-center justify-center">
+              <app-icon name="close" [size]="12"></app-icon>
+            </button>
+          </div>
+          <div *ngFor="let d of incomingDeps()" class="flex items-center gap-2 text-xs text-glass-secondary">
+            <span class="px-1.5 py-0.5 rounded" style="background: rgba(245,158,11,0.15); color:#f59e0b;">après</span>
+            <span class="flex-1 truncate">{{ itemTitle(d.sourceId) }}</span>
+            <button (click)="removeDependency(d.id)" class="glass-btn rounded w-6 h-6 flex items-center justify-center">
+              <app-icon name="close" [size]="12"></app-icon>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-glass-muted whitespace-nowrap">Cet élément doit précéder :</span>
+          <div class="flex-1">
+            <app-select [options]="depTargetOptions()" [value]="newDepTarget"
+              placeholder="Choisir un élément…" (valueChange)="newDepTarget = $event"></app-select>
+          </div>
+          <button (click)="addDependency()" class="glass-btn rounded-lg px-3 py-1.5 text-sm whitespace-nowrap">Ajouter</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-5 py-3 border-t glass-divider flex justify-between">
+      <button (click)="deleteItem()" class="rounded-lg px-3 py-2 text-sm font-medium"
+        style="background: rgba(239,68,68,0.15); color:#ef4444;">Supprimer</button>
+      <button (click)="onClose()" class="btn-accent rounded-lg px-4 py-2 text-sm">Fermer</button>
+    </div>
+  </div>
+</div>

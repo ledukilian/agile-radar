@@ -1,0 +1,121 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm" style="background: rgba(17,17,17,0.5);">
+  <div class="glass-card rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-fade-in">
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b glass-divider">
+      <div class="flex items-center gap-3">
+        <app-icon name="settings" [size]="22" color="var(--accent)"></app-icon>
+        <h2 class="text-lg font-semibold text-glass-primary">Configuration du projet</h2>
+      </div>
+      <button (click)="onClose()" class="glass-btn rounded-lg w-9 h-9 flex items-center justify-center text-glass-secondary">
+        <app-icon name="close" [size]="16"></app-icon>
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 px-6 pt-4">
+      <button (click)="setTab('project')" class="px-4 py-2 rounded-lg text-sm font-medium"
+        [class.tab-active]="activeTab === 'project'" [class.glass-btn]="activeTab !== 'project'">
+        Projet
+      </button>
+      <button (click)="setTab('iterations')" class="px-4 py-2 rounded-lg text-sm font-medium"
+        [class.tab-active]="activeTab === 'iterations'" [class.glass-btn]="activeTab !== 'iterations'">
+        Itérations & capacité
+      </button>
+      <button (click)="setTab('curse')" class="px-4 py-2 rounded-lg text-sm font-medium"
+        [class.tab-active]="activeTab === 'curse'" [class.glass-btn]="activeTab !== 'curse'">
+        Axes CURSE
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="flex-1 overflow-y-auto px-6 py-5">
+
+      <!-- ============ PROJET ============ -->
+      <div *ngIf="activeTab === 'project'" class="space-y-5">
+        <div>
+          <label class="block text-sm font-medium text-glass-secondary mb-1">Nom du projet</label>
+          <input class="glass-input rounded-lg px-3 py-2 w-full" [(ngModel)]="projectName" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-glass-secondary mb-1">Auteur par défaut</label>
+            <input class="glass-input rounded-lg px-3 py-2 w-full" [(ngModel)]="author" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-glass-secondary mb-1">
+              Ratio points / jour-homme (par défaut)
+            </label>
+            <input type="number" step="0.1" min="0" class="glass-input rounded-lg px-3 py-2 w-full"
+              [(ngModel)]="pointsPerManDayDefault" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-glass-secondary mb-1">Échelle de points (Fibonacci)</label>
+          <input class="glass-input rounded-lg px-3 py-2 w-full" [(ngModel)]="fibonacciText" />
+          <p class="text-xs text-glass-muted mt-1">Valeurs séparées par des virgules. Utilisées pour la saisie et l'aide radar.</p>
+        </div>
+      </div>
+
+      <!-- ============ ITÉRATIONS ============ -->
+      <div *ngIf="activeTab === 'iterations'" class="space-y-4">
+        <!-- Recalibrage -->
+        <div class="glass-inner rounded-lg p-4" *ngIf="suggestedRatio !== null">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium text-glass-primary">Recalibrage du ratio</div>
+              <div class="text-xs text-glass-muted">
+                D'après {{ pastIterationsWithData.length }} itération(s) passée(s) :
+                <strong>{{ suggestedRatio }}</strong> points / jour-homme observés.
+              </div>
+            </div>
+            <button (click)="applySuggestedRatio()" class="glass-btn rounded-lg px-3 py-2 text-sm">
+              Appliquer aux futures
+            </button>
+          </div>
+        </div>
+
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-glass-secondary">{{ iterations.length }} itération(s)</span>
+          <button (click)="addIteration()" class="glass-btn rounded-lg px-3 py-2 text-sm font-medium">
+            + Ajouter une itération
+          </button>
+        </div>
+
+        <div *ngFor="let it of iterations; let i = index; trackBy: trackIteration">
+          <app-iteration-form [iterationId]="it.id" [index]="i"></app-iteration-form>
+        </div>
+      </div>
+
+      <!-- ============ AXES CURSE ============ -->
+      <div *ngIf="activeTab === 'curse'" class="space-y-3">
+        <p class="text-sm text-glass-muted">
+          Le radar CURSE aide à estimer : il propose un nombre de points arrondi au Fibonacci le plus proche.
+          Personnalisez les axes, leurs poids et leur activation.
+        </p>
+        <div *ngFor="let axis of axes; let i = index; trackBy: trackAxis" class="glass-inner rounded-lg p-3 flex items-center gap-3">
+          <input type="checkbox" [checked]="axis.enabled" (change)="updateAxis(i, { enabled: !axis.enabled })" />
+          <app-color-picker [value]="axis.color"
+            (valueChange)="updateAxis(i, { color: $event })"></app-color-picker>
+          <input class="glass-input rounded px-2 py-1 flex-1 text-sm" placeholder="Nom de l'axe"
+            [ngModel]="axis.label" (ngModelChange)="updateAxis(i, { label: $event })" />
+          <label class="text-xs text-glass-muted flex items-center gap-1">
+            Poids
+            <input type="number" min="0" step="0.5" class="glass-input rounded px-2 py-1 w-16 text-sm"
+              [ngModel]="axis.weight" (ngModelChange)="updateAxis(i, { weight: +$event })" />
+          </label>
+          <button (click)="removeAxis(i)" class="glass-btn rounded w-8 h-8 flex items-center justify-center">
+            <app-icon name="close" [size]="13"></app-icon>
+          </button>
+        </div>
+        <button (click)="addAxis()" class="glass-btn rounded-lg px-3 py-2 text-sm">+ Ajouter un axe</button>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-4 border-t glass-divider flex justify-end">
+      <button (click)="onClose()" class="btn-accent rounded-lg px-4 py-2 text-sm">
+        Terminé
+      </button>
+    </div>
+  </div>
+</div>

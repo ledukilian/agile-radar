@@ -1,14 +1,14 @@
-import { Component, OnInit, AfterViewInit } from '@angular/core';
+import { AfterViewInit, Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Estimation, DimensionWeights, TShirtSize, TShirtSizesConfig } from './models/estimation.model';
-import { EstimationFormComponent } from './components/estimation-form/estimation-form.component';
-import { RadarChartComponent } from './components/radar-chart/radar-chart.component';
-import { EstimationListComponent } from './components/estimation-list/estimation-list.component';
-import { PlanningBoardComponent } from './components/planning-board/planning-board.component';
-import { EstimationService } from './services/estimation.service';
-import { SettingsService } from './services/settings.service';
-import { TourService } from './services/tour.service';
+import { ProjectStore } from './core/store/project.store';
+import { TourService } from './shared/tour/tour.service';
+import { WorkspaceComponent } from './features/workspace/workspace.component';
+import { SetupComponent } from './features/setup/setup.component';
+import { ItemDetailComponent } from './features/item-detail/item-detail.component';
+import { IterationSettingsComponent } from './features/iteration-settings/iteration-settings.component';
+import { InsightsPanelComponent } from './features/insights/insights-panel.component';
+import { IconComponent } from './shared/icon/icon.component';
 import { environment } from '../environments/environment';
 
 @Component({
@@ -17,219 +17,96 @@ import { environment } from '../environments/environment';
   imports: [
     CommonModule,
     FormsModule,
-    EstimationFormComponent,
-    RadarChartComponent,
-    EstimationListComponent,
-    PlanningBoardComponent
+    WorkspaceComponent,
+    SetupComponent,
+    ItemDetailComponent,
+    IterationSettingsComponent,
+    InsightsPanelComponent,
+    IconComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class AppComponent implements OnInit, AfterViewInit {
-  selectedEstimation?: Estimation;
-  appVersion = environment.version;
-  isDarkMode = false;
-  isEditing = false;
-  mobileTab: 'list' | 'chart' | 'form' = 'list';
-  
-  // Navigation principale
-  currentView: 'estimation' | 'planning' = 'estimation';
-  
-  // Paramètres
-  showSettingsModal = false;
-  settingsTab: 'general' | 'weights' | 'tshirt' = 'general';
-  defaultAuthorSetting = '';
-  private readonly AUTHOR_STORAGE_KEY = 'agile-radar-default-author';
-  
-  // Paramètres avancés (multiplicateurs)
-  dimensionWeights: DimensionWeights = {
-    complexity: 1.5,
-    uncertainty: 2,
-    risk: 2,
-    size: 1,
-    effort: 1
-  };
-  tShirtSizes: TShirtSize[] = []; // Deprecated
-  tShirtSizesConfig: TShirtSizesConfig = {
-    userStory: [],
-    feature: []
-  };
-
-  constructor(
-    private estimationService: EstimationService,
-    private settingsService: SettingsService,
-    private tourService: TourService
-  ) {}
-
-  ngOnInit(): void {
-    // Charger la préférence de thème depuis le localStorage
-    const savedTheme = localStorage.getItem('agile-radar-theme');
-    if (savedTheme) {
-      this.isDarkMode = savedTheme === 'dark';
-    }
-    // Par défaut : mode clair (isDarkMode = false)
-  }
+export class AppComponent implements AfterViewInit {
+  readonly store = inject(ProjectStore);
+  readonly tour = inject(TourService);
+  readonly version = environment.version;
 
   ngAfterViewInit(): void {
-    // Lancer le tour automatiquement pour les nouveaux utilisateurs
-    setTimeout(() => {
-      if (!this.tourService.isTourCompleted()) {
-        this.tourService.startTour();
-      }
-    }, 500);
-
-    // Écouter l'événement de création d'estimation depuis le tour
-    document.addEventListener('tour-estimation-created', ((event: CustomEvent) => {
-      const estimation = event.detail.estimation;
-      if (estimation) {
-        this.onNewEstimationCreated(estimation);
-      }
-    }) as EventListener);
+    if (!this.tour.isDone()) {
+      setTimeout(() => this.tour.start(), 600);
+    }
   }
 
-  /**
-   * Lance ou relance le tour guidé
-   */
   startTour(): void {
-    this.tourService.resetTour();
-    this.tourService.startTour();
+    this.tour.start();
   }
 
-  toggleTheme(): void {
-    this.isDarkMode = !this.isDarkMode;
-    localStorage.setItem('agile-radar-theme', this.isDarkMode ? 'dark' : 'light');
+  readonly showSetup = signal(false);
+  readonly showInsights = signal(false);
+  readonly showDataMenu = signal(false);
+  readonly selectedItemId = signal<string | null>(null);
+  readonly selectedIterationId = signal<string | null>(null);
+
+  readonly projectName = computed(() => this.store.project().name);
+
+  openSetup(): void {
+    this.showSetup.set(true);
+  }
+  closeSetup(): void {
+    this.showSetup.set(false);
   }
 
-  onSelectEstimation(estimation: Estimation | null): void {
-    this.selectedEstimation = estimation || undefined;
-    // Mode consultation par défaut lors de la sélection
-    this.isEditing = false;
-    // Sur mobile, passer au tab chart quand on sélectionne une estimation
-    if (estimation) {
-      this.mobileTab = 'chart';
+  openIterationSettings(id: string): void {
+    this.selectedIterationId.set(id);
+  }
+  closeIterationSettings(): void {
+    this.selectedIterationId.set(null);
+  }
+
+  toggleInsights(): void {
+    this.showInsights.update(v => !v);
+  }
+
+  toggleDataMenu(): void {
+    this.showDataMenu.update(v => !v);
+  }
+  closeDataMenu(): void {
+    this.showDataMenu.set(false);
+  }
+
+  openItem(id: string): void {
+    this.selectedItemId.set(id);
+  }
+  closeItem(): void {
+    this.selectedItemId.set(null);
+  }
+
+  deleteAll(): void {
+    if (!confirm('Supprimer tout le contenu du projet ? Cette action est irréversible — pensez à exporter avant de continuer.')) {
+      return;
     }
+    this.store.newProject();
+    this.closeDataMenu();
   }
 
-  onNewEstimationCreated(estimation: Estimation): void {
-    this.selectedEstimation = estimation;
-    // Mode édition directement pour une nouvelle estimation
-    this.isEditing = true;
-    // Sur mobile, passer au tab form pour la nouvelle estimation
-    this.mobileTab = 'form';
+  exportProject(): void {
+    this.store.downloadJson();
   }
 
-  onStartEditing(): void {
-    this.isEditing = true;
-    // Sur mobile, passer au tab form
-    this.mobileTab = 'form';
-  }
-
-  onStopEditing(): void {
-    this.isEditing = false;
-    this.mobileTab = 'chart';
-  }
-
-  onEstimationChanged(estimation: Estimation | null): void {
-    if (estimation) {
-      // Mettre à jour l'estimation sélectionnée pour le live update
-      this.selectedEstimation = estimation;
-    }
-  }
-
-  onDeleteEstimation(id: string): void {
-    this.estimationService.deleteEstimation(id);
-    if (this.selectedEstimation?.id === id) {
-      // Après suppression, ne plus afficher d'estimation
-      this.selectedEstimation = undefined;
-    }
-  }
-
-  /**
-   * Ouvre la modale des paramètres et charge les valeurs actuelles
-   */
-  openSettingsModal(): void {
-    try {
-      this.defaultAuthorSetting = localStorage.getItem(this.AUTHOR_STORAGE_KEY) || '';
-    } catch {
-      this.defaultAuthorSetting = '';
-    }
-    // Charger les paramètres avancés
-    this.dimensionWeights = { ...this.settingsService.getDimensionWeights() };
-    const config = this.settingsService.getTShirtSizesConfig();
-    this.tShirtSizesConfig = {
-      userStory: config.userStory.map(s => ({ ...s })),
-      feature: config.feature.map(s => ({ ...s }))
-    };
-    this.settingsTab = 'general';
-    this.showSettingsModal = true;
-  }
-
-  /**
-   * Sauvegarde les paramètres
-   */
-  saveSettings(): void {
-    try {
-      // Sauvegarder l'auteur par défaut
-      if (this.defaultAuthorSetting.trim()) {
-        localStorage.setItem(this.AUTHOR_STORAGE_KEY, this.defaultAuthorSetting.trim());
-      } else {
-        localStorage.removeItem(this.AUTHOR_STORAGE_KEY);
+  onImportFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        this.store.importJson(reader.result as string);
+      } catch {
+        alert('Fichier JSON invalide.');
       }
-      
-      // Sauvegarder les paramètres avancés
-      this.settingsService.updateDimensionWeights(this.dimensionWeights);
-      this.settingsService.updateTShirtSizesConfig(this.tShirtSizesConfig);
-    } catch {
-      // Ignore localStorage errors
-    }
-    this.showSettingsModal = false;
-  }
-
-  /**
-   * Réinitialise les poids des dimensions aux valeurs par défaut
-   */
-  resetWeights(): void {
-    this.dimensionWeights = { ...this.settingsService.getDefaultDimensionWeights() };
-  }
-
-  /**
-   * Réinitialise les tailles T-shirt aux valeurs par défaut
-   */
-  resetTShirtSizes(): void {
-    const defaultConfig = this.settingsService.getDefaultTShirtSizesConfig();
-    this.tShirtSizesConfig = {
-      userStory: defaultConfig.userStory.map(s => ({ ...s })),
-      feature: defaultConfig.feature.map(s => ({ ...s }))
     };
-  }
-
-  /**
-   * Labels français pour les dimensions
-   */
-  dimensionLabels: { [key: string]: string } = {
-    complexity: 'Complexité',
-    uncertainty: 'Incertitude',
-    risk: 'Risque',
-    size: 'Taille',
-    effort: 'Effort'
-  };
-
-  /**
-   * Liste des clés de dimensions pour l'itération
-   */
-  dimensionKeys: (keyof DimensionWeights)[] = ['complexity', 'uncertainty', 'risk', 'size', 'effort'];
-
-  /**
-   * Récupère le poids d'une dimension
-   */
-  getWeight(key: keyof DimensionWeights): number {
-    return this.dimensionWeights[key];
-  }
-
-  /**
-   * Met à jour le poids d'une dimension
-   */
-  setWeight(key: keyof DimensionWeights, value: number): void {
-    this.dimensionWeights[key] = value;
+    reader.readAsText(file);
+    input.value = '';
   }
 }

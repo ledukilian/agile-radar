@@ -1,472 +1,72 @@
-<div class="h-screen app-background flex flex-col overflow-hidden relative" [class.light-mode]="!isDarkMode">
+<div class="app-shell app-background light-mode h-screen relative overflow-hidden">
+  <app-workspace class="workspace-host"
+    (openItem)="openItem($event)" (openSetup)="openSetup()"
+    (openIterationSettings)="openIterationSettings($event)"></app-workspace>
 
-  <!-- Boutons coin supérieur droit -->
-  <div class="absolute top-4 right-4 z-20 flex items-center gap-2">
-    <!-- Bouton Aide / Tour guidé -->
-    <button
-      *ngIf="currentView === 'estimation'"
-      (click)="startTour()"
-      class="p-2.5 text-glass-muted hover:text-glass-secondary transition-all duration-200 rounded-xl hover:bg-white/10 hover:scale-105"
-      title="Aide - Tour guidé"
-    >
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    </button>
-    
-    <!-- Bouton Paramètres -->
-    <button
-      (click)="openSettingsModal()"
-      class="p-2.5 text-glass-muted hover:text-glass-secondary transition-all duration-200 rounded-xl hover:bg-white/10 hover:scale-105 hover:rotate-45"
-      title="Paramètres"
-    >
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    </button>
-  </div>
-
-  <!-- Main Content -->
-  <main class="w-full flex-1 flex flex-col overflow-hidden">
-    <div [class]="currentView === 'planning' ? 'flex flex-col flex-1 overflow-hidden max-w-[2200px] mx-auto w-full' : 'px-3 sm:px-6 lg:px-8 2xl:px-12 py-4 flex flex-col flex-1 overflow-hidden max-w-[2200px] mx-auto w-full'">
-      <!-- Header avec navigation centrée -->
-      <div class="flex items-center mb-3 lg:mb-6 shrink-0 relative" *ngIf="currentView === 'estimation'">
-        <!-- Logo et titre stylisé -->
-        <div class="flex items-center gap-3">
-          <!-- Icône avec effet glow gris -->
-          <div class="relative">
-            <div class="absolute inset-0 bg-gradient-to-br from-slate-400 to-gray-500 rounded-xl blur-md opacity-50"></div>
-            <div class="relative w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-slate-300 via-gray-400 to-slate-500 rounded-xl flex items-center justify-center shadow-lg border border-slate-300/50">
-              <span class="text-xl sm:text-2xl drop-shadow-sm">📡</span>
-            </div>
-          </div>
-          <!-- Titre avec dégradé gris -->
-          <div class="flex flex-col">
-            <h1 class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight">
-              <span class="hidden sm:inline bg-gradient-to-r from-slate-500 via-gray-600 to-slate-600 bg-clip-text text-transparent drop-shadow-sm">
-                Agile Radar
-              </span>
-              <span class="sm:hidden bg-gradient-to-r from-slate-500 via-gray-600 to-slate-600 bg-clip-text text-transparent drop-shadow-sm">
-                Radar
-              </span>
-            </h1>
-            <span class="hidden lg:block text-[10px] text-slate-500/70 font-medium tracking-widest uppercase">
-              Estimation CURSE
-            </span>
-          </div>
-        </div>
-
-        <!-- Navigation principale (centrée absolument) -->
-        <nav class="absolute left-1/2 -translate-x-1/2 hidden sm:flex items-center gap-1 glass-card rounded-xl p-1">
-          <button
-            class="nav-btn px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 active"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            <span class="hidden md:inline">Estimation</span>
-          </button>
-          <button
-            (click)="currentView = 'planning'"
-            class="nav-btn px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-            <span class="hidden md:inline">Planification</span>
-          </button>
-        </nav>
-
-        <!-- Navigation mobile (à droite) -->
-        <div class="flex sm:hidden gap-1 ml-auto">
-          <button
-            class="nav-btn-mobile p-2 rounded-lg transition-all active"
-            title="Estimation"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </button>
-          <button
-            (click)="currentView = 'planning'"
-            class="nav-btn-mobile p-2 rounded-lg transition-all"
-            title="Planification"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-          </button>
-        </div>
-        
-        <!-- Mobile tabs (visible only when estimation is selected in estimation view) -->
-        <div class="hidden lg:hidden gap-1 ml-4" [class.flex]="selectedEstimation">
-          <button 
-            (click)="mobileTab = 'list'"
-            [class.active-tab]="mobileTab === 'list'"
-            class="mobile-tab px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
-          >
-            Liste
-          </button>
-          <button 
-            (click)="mobileTab = 'chart'"
-            [class.active-tab]="mobileTab === 'chart'"
-            class="mobile-tab px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
-          >
-            Radar
-          </button>
-          <button 
-            *ngIf="isEditing"
-            (click)="mobileTab = 'form'"
-            [class.active-tab]="mobileTab === 'form'"
-            class="mobile-tab px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
-          >
-            Édition
-          </button>
-        </div>
+  <!-- Top bar flottante -->
+  <header class="topbar flex items-center gap-3 px-4 h-14">
+    <div class="flex items-center gap-2.5">
+      <span class="brand-badge"><app-icon name="radar" [size]="18" color="#ffffff"></app-icon></span>
+      <div class="flex flex-col leading-none">
+        <span class="brand-title">Agile Radar</span>
+        <span class="brand-version">v{{ version }}</span>
       </div>
+    </div>
 
-      <!-- ========== VUE ESTIMATION ========== -->
-      <ng-container *ngIf="currentView === 'estimation'">
-        <!-- Desktop Layout (lg+) -->
-        <div class="hidden lg:flex gap-4 xl:gap-6 2xl:gap-10 flex-1 overflow-hidden">
-          <!-- Colonne 1 : Liste des estimations (largeur fixe adaptative) -->
-          <div class="flex flex-col rounded-2xl overflow-hidden w-80 xl:w-96 2xl:w-[26rem] shrink-0">
-            <app-estimation-list
-              class="flex-1 flex flex-col overflow-hidden"
-              [selectedId]="selectedEstimation?.id"
-              (selectEstimation)="onSelectEstimation($event)"
-              (newEstimationCreated)="onNewEstimationCreated($event)"
-            ></app-estimation-list>
-          </div>
+    <div class="topbar-divider"></div>
 
-          <!-- Colonnes 2 et 3 : Radar + Formulaire/Recommandations (toujours la même largeur) -->
-          <ng-container *ngIf="selectedEstimation">
-            <!-- Colonne 2 : Radar Chart -->
-            <div class="flex flex-col rounded-2xl overflow-hidden flex-1 min-w-0">
-              <app-radar-chart 
-                [estimation]="selectedEstimation"
-                [showEditButton]="!isEditing"
-                [isEditing]="isEditing"
-                (editEstimation)="onStartEditing()"
-                (closeEdit)="onStopEditing()"
-              ></app-radar-chart>
-            </div>
+    <button (click)="openSetup()" data-tour="config" class="topbar-btn rounded-lg w-9 h-9 flex items-center justify-center" title="Configuration">
+      <app-icon name="settings" [size]="16"></app-icon>
+    </button>
 
-            <!-- Colonne 3 : Formulaire de détails -->
-            <div class="flex flex-col rounded-2xl overflow-hidden flex-1 min-w-0">
-              <app-estimation-form
-                *ngIf="isEditing"
-                class="h-full"
-                [estimation]="selectedEstimation"
-                [compact]="true"
-                (estimationChanged)="onEstimationChanged($event)"
-                (deleteEstimation)="onDeleteEstimation($event)"
-                (closeForm)="onStopEditing()"
-              ></app-estimation-form>
-            </div>
-          </ng-container>
-        </div>
+    <input class="topbar-input px-3 py-1.5 text-sm w-64 rounded-lg"
+      [ngModel]="projectName()" (ngModelChange)="store.setProjectName($event)" placeholder="Nom du projet" />
 
-        <!-- Mobile/Tablet Layout (<lg) -->
-        <div class="flex lg:hidden flex-1 overflow-hidden">
-          <!-- Si aucune estimation sélectionnée, on affiche la liste -->
-          <div class="flex flex-col flex-1 overflow-hidden" *ngIf="!selectedEstimation">
-            <app-estimation-list
-              class="flex-1 flex flex-col overflow-hidden"
-              [selectedId]="undefined"
-              (selectEstimation)="onSelectEstimation($event)"
-              (newEstimationCreated)="onNewEstimationCreated($event)"
-            ></app-estimation-list>
-          </div>
+    <button (click)="startTour()" class="topbar-btn rounded-lg w-9 h-9 flex items-center justify-center" title="Visite guidée">
+      <app-icon name="help" [size]="16"></app-icon>
+    </button>
 
-          <!-- Si une estimation est sélectionnée, on affiche selon le tab actif -->
-          <ng-container *ngIf="selectedEstimation">
-            <!-- Tab Liste -->
-            <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'list'">
-              <app-estimation-list
-                class="flex-1 flex flex-col overflow-hidden"
-                [selectedId]="selectedEstimation?.id"
-                (selectEstimation)="onSelectEstimation($event)"
-                (newEstimationCreated)="onNewEstimationCreated($event)"
-              ></app-estimation-list>
-            </div>
-
-            <!-- Tab Radar Chart -->
-            <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'chart'">
-              <app-radar-chart 
-                [estimation]="selectedEstimation"
-                [showEditButton]="true"
-                [isEditing]="isEditing"
-                (editEstimation)="onStartEditing()"
-                (closeEdit)="onStopEditing()"
-              ></app-radar-chart>
-            </div>
-
-            <!-- Tab Formulaire (seulement en mode édition) -->
-            <div class="flex flex-col flex-1 overflow-hidden" *ngIf="mobileTab === 'form' && isEditing">
-              <app-estimation-form
-                [estimation]="selectedEstimation"
-                [compact]="true"
-                (estimationChanged)="onEstimationChanged($event)"
-                (deleteEstimation)="onDeleteEstimation($event)"
-                (closeForm)="onStopEditing()"
-              ></app-estimation-form>
-            </div>
-          </ng-container>
+    <!-- Menu Données -->
+    <div class="data-menu">
+      <button (click)="toggleDataMenu()" class="topbar-btn rounded-lg w-9 h-9 flex items-center justify-center"
+        [class.topbar-btn-on]="showDataMenu()" title="Importer / exporter">
+        <app-icon name="save" [size]="16"></app-icon>
+      </button>
+      <ng-container *ngIf="showDataMenu()">
+        <div class="data-menu-backdrop" (click)="closeDataMenu()"></div>
+        <div class="data-menu-panel">
+          <label class="data-menu-item cursor-pointer">
+            <app-icon name="download" [size]="16" class="data-menu-icon"></app-icon> Importer…
+            <input type="file" accept="application/json" class="hidden"
+              (change)="onImportFile($event); closeDataMenu()" />
+          </label>
+          <button (click)="exportProject(); closeDataMenu()" class="data-menu-item">
+            <app-icon name="upload" [size]="16" class="data-menu-icon"></app-icon> Exporter
+          </button>
+          <div class="data-menu-sep"></div>
+          <button (click)="deleteAll()" class="data-menu-item data-menu-item-danger">
+            <app-icon name="trash" [size]="16" class="data-menu-icon"></app-icon> Tout supprimer
+          </button>
         </div>
       </ng-container>
-
-      <!-- ========== VUE PLANIFICATION ========== -->
-      <app-planning-board 
-        *ngIf="currentView === 'planning'"
-        class="flex-1 overflow-hidden -mb-4"
-        (navigateToEstimation)="currentView = 'estimation'"
-      ></app-planning-board>
-    </div>
-  </main>
-
-  <!-- Footer (masqué en mode planification) -->
-  <footer *ngIf="currentView === 'estimation'" class="absolute bottom-0 left-0 right-0 py-2 px-4 text-center text-gray-400 text-xs z-0">
-    <span class="hidden sm:inline">v{{ appVersion }} • <a href="https://github.com/ledukilian/agile-radar" target="_blank" rel="noopener noreferrer" class="hover:text-glass-secondary underline">GitHub</a> • Made with ❤️ by <a href="https://ledukilian.fr" target="_blank" rel="noopener noreferrer" class="hover:text-glass-secondary underline">Kilian LE DU</a></span>
-    <span class="sm:hidden">v{{ appVersion }} • <a href="https://github.com/ledukilian/agile-radar" target="_blank" rel="noopener noreferrer" class="hover:text-glass-secondary underline">GitHub</a></span>
-  </footer>
-</div>
-
-<!-- Modale Paramètres -->
-<div 
-  *ngIf="showSettingsModal" 
-  class="fixed inset-0 z-50 flex items-center justify-center p-4"
-  (click)="showSettingsModal = false"
->
-  <!-- Backdrop -->
-  <div class="absolute inset-0 bg-black/30 backdrop-blur-[2px]"></div>
-  
-  <!-- Modal content -->
-  <div 
-    class="bg-white rounded-2xl p-5 w-full max-w-2xl relative z-10 shadow-xl max-h-[95vh] flex flex-col"
-    (click)="$event.stopPropagation()"
-  >
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-4 shrink-0">
-      <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-        Paramètres
-      </h2>
-      <button 
-        (click)="showSettingsModal = false"
-        class="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
     </div>
 
-    <!-- Tabs -->
-    <div class="flex gap-1 mb-4 shrink-0 border-b border-gray-200">
-      <button
-        (click)="settingsTab = 'general'"
-        class="px-4 py-2 text-sm font-medium transition-colors rounded-t-lg"
-        [ngClass]="settingsTab === 'general' ? 'text-blue-600 border-b-2 border-blue-600 -mb-px bg-blue-50' : 'text-gray-500 hover:text-gray-700'"
-      >
-        Général
-      </button>
-      <button
-        (click)="settingsTab = 'weights'"
-        class="px-4 py-2 text-sm font-medium transition-colors rounded-t-lg"
-        [ngClass]="settingsTab === 'weights' ? 'text-blue-600 border-b-2 border-blue-600 -mb-px bg-blue-50' : 'text-gray-500 hover:text-gray-700'"
-      >
-        Poids
-      </button>
-      <button
-        (click)="settingsTab = 'tshirt'"
-        class="px-4 py-2 text-sm font-medium transition-colors rounded-t-lg"
-        [ngClass]="settingsTab === 'tshirt' ? 'text-blue-600 border-b-2 border-blue-600 -mb-px bg-blue-50' : 'text-gray-500 hover:text-gray-700'"
-      >
-        Tailles de T-Shirt
+    <div class="ml-auto flex items-center gap-2">
+      <button (click)="toggleInsights()" class="topbar-btn rounded-lg px-3 py-1.5 text-sm inline-flex items-center gap-1.5"
+        [class.topbar-btn-on]="showInsights()">
+        <app-icon name="lightbulb" [size]="15"></app-icon> Insights
       </button>
     </div>
-    
-    <!-- Content -->
-    <div class="flex-1 overflow-y-auto">
-      <!-- Tab Général -->
-      <div *ngIf="settingsTab === 'general'" class="space-y-4">
-        <!-- Auteur par défaut -->
-        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-          <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <div class="flex-1 min-w-0">
-              <label class="block text-sm font-semibold text-gray-800 mb-1">
-                Auteur par défaut
-              </label>
-              <p class="text-xs text-gray-500 mb-3">
-                Ce nom sera utilisé automatiquement pour les nouvelles estimations.
-              </p>
-              <div class="relative">
-                <input
-                  type="text"
-                  [(ngModel)]="defaultAuthorSetting"
-                  placeholder="Entrez votre nom..."
-                  class="w-full pl-3 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 transition-all shadow-sm"
-                />
-                <div class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <svg *ngIf="defaultAuthorSetting" class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <svg *ngIf="!defaultAuthorSetting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+  </header>
 
-      </div>
+  <aside *ngIf="showInsights()" data-tour="insights" class="insights-col">
+    <app-insights-panel (openItem)="openItem($event)"></app-insights-panel>
+  </aside>
 
-      <!-- Tab Poids des dimensions -->
-      <div *ngIf="settingsTab === 'weights'" class="space-y-3">
-        <div class="flex justify-between items-center">
-          <p class="text-xs text-gray-500">Multiplicateurs d'importance pour chaque dimension</p>
-          <button
-            (click)="resetWeights()"
-            class="text-xs text-blue-600 hover:text-blue-500 hover:underline"
-          >
-            Réinitialiser
-          </button>
-        </div>
-
-        <!-- Grille compacte des sliders -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div *ngFor="let key of dimensionKeys" class="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
-            <label class="text-xs font-medium text-gray-700 w-20 shrink-0">{{ dimensionLabels[key] }}</label>
-            <input
-              type="range"
-              min="0.5"
-              max="3"
-              step="0.5"
-              [ngModel]="getWeight(key)"
-              (ngModelChange)="setWeight(key, $event)"
-              class="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-            />
-            <span 
-              class="text-xs font-bold px-1.5 py-0.5 rounded w-10 text-center shrink-0"
-              [ngClass]="getWeight(key) >= 2 ? 'bg-red-100 text-red-700' : getWeight(key) >= 1.5 ? 'bg-orange-100 text-orange-700' : getWeight(key) >= 1 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'"
-            >
-              ×{{ getWeight(key) }}
-            </span>
-          </div>
-        </div>
-
-        <!-- Légende compacte -->
-        <div class="flex items-center justify-center gap-4 text-[10px] text-gray-400 pt-1">
-          <span>×0.5 (faible)</span>
-          <span>→</span>
-          <span>×1 (normal)</span>
-          <span>→</span>
-          <span>×3 (fort)</span>
-        </div>
-      </div>
-
-      <!-- Tab Échelle T-Shirt -->
-      <div *ngIf="settingsTab === 'tshirt'" class="space-y-3">
-        <div class="flex justify-between items-center">
-          <p class="text-xs text-gray-500">Seuils de points par type d'estimation</p>
-          <button
-            (click)="resetTShirtSizes()"
-            class="text-xs text-blue-600 hover:text-blue-500 hover:underline"
-          >
-            Réinitialiser
-          </button>
-        </div>
-
-        <!-- Tableau avec 2 colonnes : US et Features -->
-        <div class="border border-gray-200 rounded-lg overflow-hidden">
-          <table class="w-full text-xs">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-2 py-1.5 text-left text-gray-600 font-medium w-12">Taille</th>
-                <th class="px-2 py-1.5 text-center text-gray-600 font-medium">
-                  <span class="flex items-center justify-center gap-1">
-                    <span>🧩</span> User Story
-                  </span>
-                </th>
-                <th class="px-2 py-1.5 text-center text-gray-600 font-medium">
-                  <span class="flex items-center justify-center gap-1">
-                    <span>⭐</span> Feature
-                  </span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let size of tShirtSizesConfig.userStory; let i = index" class="border-t border-gray-100">
-                <td class="px-2 py-1.5">
-                  <span 
-                    class="px-1.5 py-0.5 rounded text-[10px] font-bold"
-                    [ngClass]="[size.bgColor, size.textColor]"
-                  >
-                    {{ size.size }}
-                  </span>
-                </td>
-                <td class="px-2 py-1.5 text-center">
-                  <div class="flex items-center justify-center gap-1">
-                    <span class="text-gray-400">≤</span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="10000"
-                      [(ngModel)]="tShirtSizesConfig.userStory[i].max"
-                      class="w-16 px-1 py-0.5 border border-gray-300 rounded text-center text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                    <span class="text-gray-400 text-[10px]">pts</span>
-                  </div>
-                </td>
-                <td class="px-2 py-1.5 text-center">
-                  <div class="flex items-center justify-center gap-1">
-                    <span class="text-gray-400">≤</span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="10000"
-                      [(ngModel)]="tShirtSizesConfig.feature[i].max"
-                      class="w-16 px-1 py-0.5 border border-gray-300 rounded text-center text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                    <span class="text-gray-400 text-[10px]">pts</span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <p class="text-[10px] text-gray-400 text-center">
-          Les features ont des seuils plus élevés car elles regroupent plusieurs US
-        </p>
-      </div>
-    </div>
-    
-    <!-- Footer -->
-    <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200 shrink-0">
-      <button
-        (click)="showSettingsModal = false"
-        class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-      >
-        Annuler
-      </button>
-      <button
-        (click)="saveSettings()"
-        class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
-      >
-        Enregistrer
-      </button>
-    </div>
-  </div>
+  <!-- Modales -->
+  <app-setup *ngIf="showSetup()" (close)="closeSetup()"></app-setup>
+  <app-iteration-settings *ngIf="selectedIterationId() as id" [iterationId]="id"
+    (close)="closeIterationSettings()"></app-iteration-settings>
+  <app-item-detail *ngIf="selectedItemId() as id" [itemId]="id"
+    (close)="closeItem()" (openItem)="openItem($event)"></app-item-detail>
 </div>

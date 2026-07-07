@@ -1,0 +1,22 @@
+<div class="cp">
+  <button #swatch type="button" class="cp-swatch" [style.background]="value"
+    [style.width.px]="size" [style.height.px]="size" (click)="toggle()" title="Choisir une couleur">
+  </button>
+
+  <ng-container *ngIf="open">
+    <div #backdrop class="cp-backdrop" (click)="close()"></div>
+    <div #popover class="cp-popover" [ngStyle]="popoverStyle">
+      <div class="cp-grid">
+        <button *ngFor="let c of palette" type="button" class="cp-cell"
+          [style.background]="c" [class.sel]="isSelected(c)" (click)="pick(c)" [title]="c">
+        </button>
+      </div>
+      <div class="cp-hex">
+        <span class="cp-hex-preview" [style.background]="value"></span>
+        <input class="cp-hex-input" [(ngModel)]="hexDraft" (keyup.enter)="applyHex()"
+          placeholder="#RRGGBB" maxlength="7" />
+        <button type="button" class="cp-apply" (click)="applyHex()">OK</button>
+      </div>
+    </div>
+  </ng-container>
+</div>

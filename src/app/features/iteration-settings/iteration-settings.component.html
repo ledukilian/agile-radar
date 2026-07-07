@@ -1,0 +1,32 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm" style="background: rgba(17,17,17,0.5);"
+  (click)="onClose()">
+  <div *ngIf="iteration() as it" class="glass-card rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-fade-in"
+    (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b glass-divider">
+      <div class="flex items-center gap-3 min-w-0">
+        <app-icon name="settings" [size]="22" color="var(--accent)"></app-icon>
+        <div class="min-w-0">
+          <h2 class="text-lg font-semibold text-glass-primary truncate">Paramètres de l'itération</h2>
+          <p class="text-xs text-glass-muted">#{{ it.order + 1 }} · {{ it.name }}</p>
+        </div>
+      </div>
+      <button (click)="onClose()" class="glass-btn rounded-lg w-9 h-9 flex items-center justify-center text-glass-secondary">
+        <app-icon name="close" [size]="16"></app-icon>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="flex-1 overflow-y-auto px-6 py-5">
+      <app-iteration-form [iterationId]="iterationIdValue" [embedded]="true"></app-iteration-form>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-4 border-t glass-divider flex justify-end">
+      <button (click)="onClose()" class="btn-accent rounded-lg px-4 py-2 text-sm">
+        Terminé
+      </button>
+    </div>
+  </div>
+</div>

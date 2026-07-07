@@ -1,0 +1,21 @@
+<div class="glass-card rounded-xl h-full flex flex-col">
+  <div class="px-3 py-3 border-b glass-divider flex items-center gap-2">
+    <app-icon name="lightbulb" [size]="18" color="var(--accent)"></app-icon>
+    <h3 class="text-sm font-semibold text-glass-primary">Insights</h3>
+    <span class="ml-auto text-[11px] text-glass-muted">{{ insights().length }}</span>
+  </div>
+
+  <div class="flex-1 overflow-y-auto p-2 space-y-2">
+    <div *ngFor="let ins of insights()"
+      class="insight glass-inner rounded-lg p-2.5"
+      [class.clickable]="ins.itemId"
+      [style.borderLeft]="'3px solid ' + colorFor(ins.type)"
+      (click)="onClick(ins)">
+      <div class="flex items-center gap-2 mb-0.5">
+        <app-icon [name]="ins.icon" [color]="colorFor(ins.type)" [size]="16"></app-icon>
+        <span class="text-sm font-medium text-glass-primary">{{ ins.title }}</span>
+      </div>
+      <p class="text-[11px] text-glass-secondary leading-snug">{{ ins.text }}</p>
+    </div>
+  </div>
+</div>

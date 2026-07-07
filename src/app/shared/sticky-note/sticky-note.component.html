@@ -1,0 +1,29 @@
+<div class="sticky-note rounded-lg shadow-lg flex flex-col"
+  [style.left.px]="note.position.x"
+  [style.top.px]="note.position.y"
+  [style.width.px]="note.width"
+  [style.height.px]="note.height"
+  [style.background]="note.color"
+  [style.color]="note.textColor">
+
+  <div class="sticky-header flex items-center justify-between px-2 py-1 cursor-move"
+    (mousedown)="onDragStart($event)">
+    <span class="opacity-50 flex items-center"><app-icon name="move" [size]="13"></app-icon></span>
+    <div class="flex items-center gap-1">
+      <button (click)="showColors = !showColors; $event.stopPropagation()"
+        class="w-5 h-5 rounded-full border border-black/20" [style.background]="note.color" title="Couleur"></button>
+      <button (click)="remove.emit(); $event.stopPropagation()" class="opacity-60 hover:opacity-100 flex items-center">
+        <app-icon name="close" [size]="13"></app-icon>
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="showColors" class="color-picker flex flex-wrap gap-1 px-2 py-1">
+    <button *ngFor="let c of colors" (click)="pickColor(c)"
+      class="w-5 h-5 rounded-full border border-black/20" [style.background]="c.value" [title]="c.name"></button>
+  </div>
+
+  <textarea class="sticky-textarea flex-1 bg-transparent resize-none px-2 py-1 text-sm outline-none"
+    [ngModel]="note.content" (ngModelChange)="contentChange.emit($event)"
+    placeholder="Écrire une note..."></textarea>
+</div>

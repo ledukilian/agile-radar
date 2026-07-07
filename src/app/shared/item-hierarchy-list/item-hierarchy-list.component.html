@@ -1,0 +1,23 @@
+<div class="item-hierarchy-list space-y-1">
+  <div *ngFor="let vm of hierarchicalItems; trackBy: trackItem"
+    class="item-hierarchy-row"
+    [attr.data-depth]="vm.depth"
+    [style.--depth]="vm.depth">
+
+    <div *ngIf="vm.orphanParentTitle" class="orphan-parent-hint">
+      <app-icon name="move" [size]="11"></app-icon>
+      <span>Rattaché à <strong>{{ vm.orphanParentTitle }}</strong></span>
+    </div>
+
+    <app-work-item-card
+      [item]="vm.item"
+      [schedule]="vm.schedule"
+      [hasChildren]="vm.hasChildren"
+      [childCount]="vm.childCount"
+      [depViolation]="vm.depViolation"
+      [depCount]="vm.depCount"
+      [depth]="vm.depth"
+      (open)="open.emit($event)">
+    </app-work-item-card>
+  </div>
+</div>

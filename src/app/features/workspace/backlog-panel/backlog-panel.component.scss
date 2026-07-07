@@ -1,0 +1,16 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.backlog-panel {
+  transition: box-shadow 0.15s ease;
+
+  &.drop-target {
+    box-shadow: 0 0 0 2px #22c55e, 0 0 24px rgba(34, 197, 94, 0.35);
+  }
+}
+
+.create-menu {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}

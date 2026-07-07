@@ -1,0 +1,16 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.insight {
+  transition: background 0.15s ease;
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover {
+      background: var(--list-hover-bg);
+    }
+  }
+}

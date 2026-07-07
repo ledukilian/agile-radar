@@ -1,0 +1,88 @@
+<div class="iteration-zone glass-card rounded-xl flex flex-col"
+  [class.drop-target]="isDropTarget"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave()"
+  (drop)="onDrop($event)">
+
+  <!-- Header -->
+  <div class="zone-header px-3 py-2 border-b">
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="order-badge text-[10px] px-1.5 py-0.5 rounded-md">
+          #{{ iteration.order + 1 }}
+        </span>
+        <span class="zone-header-title text-sm font-semibold truncate">{{ iteration.name }}</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button (click)="addItem.emit(iteration.id)" class="zone-header-btn rounded w-7 h-7 flex items-center justify-center" title="Ajouter un élément ici">
+          <app-icon name="plus" [size]="14"></app-icon>
+        </button>
+        <button (click)="editIteration.emit(iteration.id)" class="zone-header-btn rounded w-7 h-7 flex items-center justify-center" title="Configurer">
+          <app-icon name="settings" [size]="14"></app-icon>
+        </button>
+      </div>
+    </div>
+    <div *ngIf="iteration.startDate || iteration.endDate" class="zone-header-dates text-[10px] mt-0.5">
+      {{ iteration.startDate }} <span *ngIf="iteration.endDate">→ {{ iteration.endDate }}</span>
+    </div>
+  </div>
+
+  <!-- Jauge -->
+  <div class="px-3 py-2 border-b glass-divider">
+    <div class="flex items-center justify-between text-[11px] mb-1">
+      <span class="font-medium" [ngClass]="statusClass">{{ statusLabel }}</span>
+      <span class="text-glass-secondary">
+        <strong>{{ used }}</strong> / {{ net }} pts
+        <span class="text-glass-muted">(cap. {{ capacity }})</span>
+      </span>
+    </div>
+    <div class="gauge-track">
+      <!-- Zone de travail (gauche) : remplissage sur la capacité nette -->
+      <div class="gauge-available" [style.width.%]="availableWidthPct">
+        <div class="gauge-used"
+          [style.width.%]="usedFillPct"
+          [class.gauge-used-over]="usedOverflowsAvailable"
+          [style.background]="usedColor">
+        </div>
+      </div>
+      <!-- Réserves déduites depuis la droite -->
+      <div class="gauge-reserves">
+        <div *ngFor="let seg of reserveSegments" class="gauge-reserve"
+          [style.width.%]="seg.widthPct" [style.background]="seg.color"
+          [title]="reserveLabel(seg.points, seg.percentOfCapacity)"></div>
+      </div>
+    </div>
+    <div *ngIf="overflowPoints > 0" class="text-[10px] mt-1" style="color:#ef4444;">
+      {{ overflowLabel }}
+    </div>
+  </div>
+
+  <!-- Bandeau : enveloppe de bande passante réservée -->
+  <div *ngIf="hasReserves" class="reserve-banner px-3 py-2 border-b glass-divider">
+    <div class="flex items-center justify-between mb-1">
+      <span class="text-[10px] font-semibold uppercase tracking-wide text-glass-muted">Bande passante réservée</span>
+      <span class="text-[10px] font-semibold text-glass-secondary">{{ reserveLabel(reservedPoints, reservedPercent) }}</span>
+    </div>
+    <div class="flex flex-wrap gap-1.5">
+      <span *ngFor="let seg of reserveSegments" class="reserve-chip"
+        [title]="seg.label + ' : ' + reserveLabel(seg.points, seg.percentOfCapacity)">
+        <span class="reserve-dot" [style.background]="seg.color"></span>
+        <span class="reserve-chip-label">{{ seg.label }}</span>
+        <span class="reserve-chip-pts">{{ reserveLabel(seg.points, seg.percentOfCapacity) }}</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Corps : items -->
+  <div class="zone-body flex-1 overflow-y-auto p-1.5">
+    <app-item-hierarchy-list
+      [items]="items"
+      [containerIterationId]="iteration.id"
+      (open)="openItem.emit($event)">
+    </app-item-hierarchy-list>
+
+    <div *ngIf="items.length === 0" class="text-center text-[11px] text-glass-muted py-6">
+      Glissez des éléments ici
+    </div>
+  </div>
+</div>

@@ -1,0 +1,22 @@
+<div class="sel" [class.dense]="dense">
+  <button #trigger type="button" class="sel-trigger" [class.open]="open" (click)="toggle()">
+    <span class="sel-value" *ngIf="selected; else ph">
+      <app-icon *ngIf="selected.icon" [name]="selected.icon" [color]="selected.color" [size]="dense ? 14 : 16"></app-icon>
+      <span class="sel-label">{{ selected.label }}</span>
+    </span>
+    <ng-template #ph><span class="sel-placeholder">{{ placeholder }}</span></ng-template>
+    <app-icon name="chevron-down" [size]="14" class="sel-chev" [class.rot]="open"></app-icon>
+  </button>
+
+  <ng-container *ngIf="open">
+    <div #backdrop class="sel-backdrop" (click)="close()"></div>
+    <div #panel class="sel-panel" [ngStyle]="panelStyle">
+      <button *ngFor="let o of options" type="button" class="sel-option"
+        [class.sel-active]="isSelected(o)" (click)="select(o)">
+        <app-icon *ngIf="o.icon" [name]="o.icon" [color]="o.color" [size]="dense ? 14 : 16"></app-icon>
+        <span class="sel-option-label">{{ o.label }}</span>
+        <app-icon *ngIf="isSelected(o)" name="check-circle" [size]="14" class="sel-check"></app-icon>
+      </button>
+    </div>
+  </ng-container>
+</div>

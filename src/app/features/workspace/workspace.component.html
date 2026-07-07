@@ -1,0 +1,142 @@
+<div class="workspace">
+  <!-- Playground plein écran -->
+  <div #viewport class="canvas-viewport"
+    [class.grid-on]="gridEnabled"
+    [class.draw-mode]="drawMode()"
+    (mousedown)="onCanvasMouseDown($event)"
+    (mousemove)="onCanvasMouseMove($event)"
+    (mouseup)="onCanvasMouseUp()"
+    (mouseleave)="onCanvasMouseUp()">
+
+    <div class="canvas" [style.transform]="canvasTransform" style="transform-origin: 0 0;">
+      <!-- Couche dessin -->
+      <svg class="drawing-layer" xmlns="http://www.w3.org/2000/svg">
+        <path *ngFor="let s of drawings; trackBy: trackByStroke" [attr.d]="strokePath(s.points)"
+          [attr.stroke]="s.color" [attr.stroke-width]="s.thickness" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"></path>
+        <path *ngIf="currentStroke() as cs" [attr.d]="strokePath(cs.points)"
+          [attr.stroke]="cs.color" [attr.stroke-width]="cs.thickness" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+
+      <!-- Sticky notes -->
+      <app-sticky-note *ngFor="let n of stickyNotes; trackBy: trackBySticky"
+        [note]="n" [zoom]="zoom"
+        (moved)="moveSticky(n.id, $event)"
+        (contentChange)="setStickyContent(n.id, $event)"
+        (colorChange)="setStickyColor(n.id, $event.color, $event.textColor)"
+        (remove)="removeSticky(n.id)">
+      </app-sticky-note>
+
+      <div class="zones-row flex gap-4">
+        <div *ngFor="let it of iterations(); trackBy: trackByIteration" class="zone-col">
+          <app-iteration-zone
+            [iteration]="it"
+            [load]="loadFor(it.id)"
+            [items]="itemsForIteration(it.id)"
+            [isDropTarget]="dropTarget() === it.id"
+            (openItem)="openItem.emit($event)"
+            (dropItem)="onDropToIteration($event, it.id)"
+            (addItem)="onCreateItem('user-story')"
+            (editIteration)="openIterationSettings.emit($event)"
+            (dragEnterZone)="setDropTarget($event)"
+            (dragLeaveZone)="setDropTarget(null)">
+          </app-iteration-zone>
+        </div>
+
+        <!-- Aucune itération -->
+        <div *ngIf="iterations().length === 0" class="flex items-center justify-center w-full min-h-[320px]">
+          <div class="text-center">
+            <div class="empty-illustration flex items-center justify-center">
+              <app-icon name="calendar" [size]="46" color="var(--text-muted)"></app-icon>
+            </div>
+            <p class="text-glass-secondary text-sm mb-1 font-medium">Aucune itération</p>
+            <p class="text-glass-muted text-xs mb-4">Créez votre première itération pour commencer à planifier.</p>
+            <button (click)="addIteration()" class="btn-accent rounded-lg px-4 py-2 text-sm inline-flex items-center gap-1.5">
+              <app-icon name="plus" [size]="15"></app-icon> Créer une itération
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barre d'outils flottante -->
+  <div class="toolbar workspace-float flex items-center gap-2 px-3 py-2 flex-wrap" data-tour="toolbar">
+    <button (click)="addIteration()" class="btn-accent rounded-lg px-3 py-1.5 text-sm font-medium inline-flex items-center gap-1.5">
+      <app-icon name="plus" [size]="15"></app-icon> Itération
+    </button>
+
+    <div class="h-5 w-px" style="background: var(--divider);"></div>
+
+    <!-- Filtres par type -->
+    <div class="flex items-center gap-1 flex-wrap">
+      <button *ngFor="let t of types" (click)="toggleType(t)"
+        class="filter-chip inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border transition"
+        [style.borderColor]="isTypeEnabled(t) ? typeMeta(t).color : 'var(--card-border)'"
+        [style.color]="isTypeEnabled(t) ? typeMeta(t).color : 'var(--text-muted)'"
+        [style.opacity]="isTypeEnabled(t) ? 1 : 0.5">
+        <app-icon [name]="typeMeta(t).icon" [size]="12"></app-icon> {{ typeMeta(t).label }}
+      </button>
+    </div>
+
+    <div class="ml-auto flex items-center gap-2">
+      <span *ngIf="violationCount() > 0" class="text-[11px] px-2 py-1 rounded-lg"
+        style="background: rgba(239,68,68,0.15); color:#ef4444;">
+        {{ violationCount() }} dépendance(s) violée(s)
+      </span>
+      <span *ngIf="overflowCount() > 0" class="text-[11px] px-2 py-1 rounded-lg"
+        style="background: rgba(245,158,11,0.15); color:#f59e0b;">
+        {{ overflowCount() }} débordement(s)
+      </span>
+
+      <button (click)="addStickyNote()" class="glass-btn rounded px-2 h-7 text-xs inline-flex items-center gap-1.5" title="Ajouter une note">
+        <app-icon name="note" [size]="14"></app-icon> Note
+      </button>
+      <ng-container *ngIf="drawingEnabled">
+        <button (click)="toggleDrawMode()" class="glass-btn rounded px-2 h-7 text-xs inline-flex items-center gap-1.5"
+          [style.color]="drawMode() ? '#ef4444' : ''" [style.borderColor]="drawMode() ? '#ef4444' : ''"
+          title="Dessin libre">
+          <app-icon name="edit" [size]="14"></app-icon> Dessin
+        </button>
+        <app-color-picker *ngIf="drawMode()" [value]="drawColor" (valueChange)="drawColor = $event" [size]="28"></app-color-picker>
+        <input *ngIf="drawMode()" type="range" min="1" max="12" [(ngModel)]="drawThickness" class="w-16" title="Épaisseur" />
+        <button *ngIf="drawings.length > 0" (click)="clearDrawings()" class="glass-btn rounded px-2 h-7 text-xs">Effacer</button>
+      </ng-container>
+      <button (click)="exportPng()" class="glass-btn rounded px-2 h-7 text-xs inline-flex items-center gap-1.5" [disabled]="isExporting"
+        title="Exporter en PNG">
+        <app-icon name="camera" [size]="14"></app-icon> PNG
+      </button>
+
+      <div class="flex items-center gap-1">
+        <button (click)="zoomOut()" class="glass-btn rounded w-7 h-7 flex items-center justify-center" title="Dézoomer">
+          <app-icon name="minus" [size]="15"></app-icon>
+        </button>
+        <span class="text-[11px] text-glass-muted w-10 text-center">{{ (zoom * 100) | number:'1.0-0' }}%</span>
+        <button (click)="zoomIn()" class="glass-btn rounded w-7 h-7 flex items-center justify-center" title="Zoomer">
+          <app-icon name="plus" [size]="15"></app-icon>
+        </button>
+        <button (click)="resetZoom()" class="glass-btn rounded px-2 h-7 text-xs inline-flex items-center gap-1.5" title="Réinitialiser la vue">
+          <app-icon name="reset" [size]="14"></app-icon> Réinitialiser la vue
+        </button>
+      </div>
+      <button (click)="toggleGrid()" class="glass-btn rounded px-2 h-7 text-xs inline-flex items-center gap-1.5"
+        [style.opacity]="gridEnabled ? 1 : 0.5" title="Afficher/masquer la grille">
+        <app-icon name="grid" [size]="13"></app-icon> Grille
+      </button>
+    </div>
+  </div>
+
+  <!-- Backlog flottant -->
+  <div class="backlog-col workspace-float" data-tour="backlog">
+    <app-backlog-panel
+      [items]="backlogVMs()"
+      [isDropTarget]="dropTarget() === 'backlog'"
+      (openItem)="openItem.emit($event)"
+      (createItem)="onCreateItem($event)"
+      (dropToBacklog)="onDropToBacklog($event)"
+      (dragEnterBacklog)="setDropTarget('backlog')"
+      (dragLeaveBacklog)="setDropTarget(null)">
+    </app-backlog-panel>
+  </div>
+</div>

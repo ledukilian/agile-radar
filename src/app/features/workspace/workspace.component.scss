@@ -1,0 +1,112 @@
+:host {
+  display: block;
+  position: absolute;
+  inset: 0;
+}
+
+.workspace {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ===== Playground plein écran ===== */
+.canvas-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: grab;
+  --grid-color: rgba(128, 128, 128, 0.14);
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &.grid-on {
+    background-color: var(--bg-primary);
+    background-image:
+      linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
+
+.canvas-viewport.draw-mode {
+  cursor: crosshair;
+}
+
+.canvas {
+  position: relative;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.drawing-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.zones-row {
+  position: relative;
+  z-index: 1;
+  align-items: flex-start;
+  min-height: 100%;
+  /* Dégage la zone visible sous les panneaux flottants au repos */
+  padding: 132px 24px 24px 312px;
+}
+
+.zone-col {
+  width: 320px;
+  flex: 0 0 auto;
+  height: calc(100vh - 156px);
+  min-height: 320px;
+}
+
+/* ===== Panneaux flottants ===== */
+.workspace-float {
+  position: absolute;
+  z-index: 20;
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+}
+
+.toolbar {
+  top: 64px;
+  left: 12px;
+  right: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 0;
+  box-shadow: var(--card-shadow);
+}
+
+.filter-chip {
+  background: var(--card-bg);
+  font-weight: 500;
+
+  &:hover {
+    background: var(--list-hover-bg);
+  }
+}
+
+.backlog-col {
+  top: 124px;
+  left: 12px;
+  bottom: 12px;
+  width: 288px;
+}
+
+.empty-illustration {
+  font-size: 40px;
+  margin-bottom: 8px;
+  opacity: 0.9;
+}
