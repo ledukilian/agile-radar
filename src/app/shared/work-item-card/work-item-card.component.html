@@ -8,13 +8,29 @@
   (dblclick)="onDblClick()"
   [title]="'Double-clic pour éditer'"
 >
-  <!-- Ligne titre : icône type + titre | points -->
+  <!-- Ligne titre : icône type + titre | points + bulle commentaires -->
   <div class="card-title-row flex items-center gap-1 min-h-0">
     <span *ngIf="depth > 0" class="tree-marker text-glass-muted" aria-hidden="true">└</span>
     <app-icon class="type-icon shrink-0" [name]="meta.icon" [color]="meta.color" [size]="12"></app-icon>
     <span class="title flex-1 min-w-0 text-xs font-semibold text-glass-primary truncate leading-tight">{{ item.title }}</span>
+    <span *ngIf="commentCount > 0" class="comment-bubble inline-flex items-center gap-0.5 shrink-0" title="{{ commentCount }} commentaire(s)">
+      <app-icon name="message-circle" [size]="11" color="var(--text-muted)"></app-icon>
+      <span class="text-[9px] text-glass-muted leading-none">{{ commentCount }}</span>
+    </span>
     <span class="pts-value shrink-0 text-[10px] font-bold text-glass-secondary leading-none">{{ effectivePoints }} pts</span>
     <app-icon *ngIf="hasWarning" class="shrink-0" name="alert-triangle" [size]="13" color="#f59e0b" [title]="warningText"></app-icon>
+  </div>
+
+  <!-- Étiquettes (max 3) -->
+  <div *ngIf="visibleLabels.length > 0" class="card-labels-row flex items-center gap-1 flex-wrap">
+    <span *ngFor="let label of visibleLabels"
+      class="label-pill text-[9px] font-semibold px-1 py-px leading-none"
+      [style.background]="label.color + '28'" [style.color]="label.color">
+      {{ label.name }}
+    </span>
+    <span *ngIf="hiddenLabelCount > 0" class="label-pill text-[9px] font-semibold px-1 py-px leading-none text-glass-muted">
+      +{{ hiddenLabelCount }}
+    </span>
   </div>
 
   <!-- Ligne méta : Jira à gauche, badges à droite -->

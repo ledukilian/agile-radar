@@ -8,6 +8,8 @@ import {
 import {
   WorkItem,
   WorkItemType,
+  WorkItemComment,
+  ItemLabel,
   Position,
   getTypeMeta
 } from '../models/work-item.model';
@@ -103,6 +105,8 @@ export class ProjectStore {
       position: partial.position ?? { x: 40, y: 40 },
       color: partial.color ?? null,
       jiraUrl: partial.jiraUrl ?? null,
+      comments: partial.comments ?? [],
+      labels: partial.labels ?? [],
       createdAt: now,
       updatedAt: now
     };
@@ -364,6 +368,72 @@ export class ProjectStore {
     });
   }
 
+  // ==================== COMMENTAIRES ====================
+
+  addComment(itemId: string, text: string, author: string): void {
+    const now = new Date().toISOString();
+    const comment: WorkItemComment = { id: generateId(), text, author, createdAt: now, updatedAt: now };
+    this.patch(d => {
+      const item = d.items.find(i => i.id === itemId);
+      if (!item) return;
+      item.comments = [...(item.comments ?? []), comment];
+      item.updatedAt = now;
+    });
+  }
+
+  updateComment(itemId: string, commentId: string, text: string, author: string): void {
+    const now = new Date().toISOString();
+    this.patch(d => {
+      const item = d.items.find(i => i.id === itemId);
+      if (!item) return;
+      item.comments = (item.comments ?? []).map(c =>
+        c.id === commentId ? { ...c, text, author, updatedAt: now } : c
+      );
+      item.updatedAt = now;
+    });
+  }
+
+  deleteComment(itemId: string, commentId: string): void {
+    this.patch(d => {
+      const item = d.items.find(i => i.id === itemId);
+      if (!item) return;
+      item.comments = (item.comments ?? []).filter(c => c.id !== commentId);
+    });
+  }
+
+  // ==================== ÉTIQUETTES ====================
+
+  addLabel(itemId: string, label: ItemLabel): void {
+    this.patch(d => {
+      const item = d.items.find(i => i.id === itemId);
+      if (!item) return;
+      if (!(item.labels ?? []).some(l => l.name.toLowerCase() === label.name.toLowerCase())) {
+        item.labels = [...(item.labels ?? []), label];
+      }
+    });
+  }
+
+  removeLabel(itemId: string, labelId: string): void {
+    this.patch(d => {
+      const item = d.items.find(i => i.id === itemId);
+      if (!item) return;
+      item.labels = (item.labels ?? []).filter(l => l.id !== labelId);
+    });
+  }
+
+  /** Toutes les étiquettes uniques du projet (par nom, insensible à la casse) */
+  readonly allLabels = computed<ItemLabel[]>(() => {
+    const seen = new Map<string, ItemLabel>();
+    for (const item of this._project().items) {
+      for (const label of item.labels ?? []) {
+        if (!seen.has(label.name.toLowerCase())) {
+          seen.set(label.name.toLowerCase(), label);
+        }
+      }
+    }
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  });
+
   // ==================== IMPORT / EXPORT ====================
 
   exportJson(): string {
@@ -425,7 +495,12 @@ export class ProjectStore {
       name: r.name ?? base.name,
       config: { ...getDefaultConfig(), ...(r.config ?? {}) },
       items: Array.isArray(r.items)
-        ? (r.items as WorkItem[]).map(i => ({ ...i, jiraUrl: i.jiraUrl ?? null }))
+        ? (r.items as WorkItem[]).map(i => ({
+            ...i,
+            jiraUrl: i.jiraUrl ?? null,
+            comments: Array.isArray(i.comments) ? i.comments : [],
+            labels: Array.isArray(i.labels) ? i.labels : []
+          }))
         : [],
       iterations: Array.isArray(r.iterations) ? (r.iterations as Iteration[]) : [],
       dependencies: Array.isArray(r.dependencies) ? (r.dependencies as Dependency[]) : [],

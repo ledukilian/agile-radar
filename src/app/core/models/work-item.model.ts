@@ -24,6 +24,29 @@ export interface Position {
  */
 export type CurseScores = Record<string, number>;
 
+/** Commentaire posé sur un WorkItem */
+export interface WorkItemComment {
+  id: string;
+  text: string;
+  author: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Étiquette colorée attachée à un WorkItem */
+export interface ItemLabel {
+  id: string;
+  name: string;
+  color: string;
+}
+
+/** Palette de couleurs prédéfinies pour les étiquettes */
+export const LABEL_PALETTE: string[] = [
+  '#ef4444', '#f97316', '#eab308', '#22c55e',
+  '#10b981', '#06b6d4', '#3b82f6', '#6366f1',
+  '#8b5cf6', '#ec4899', '#64748b', '#a855f7'
+];
+
 export interface WorkItem {
   id: string;
   type: WorkItemType;
@@ -37,6 +60,8 @@ export interface WorkItem {
   position: Position; // position libre sur le canvas
   color: string | null; // couleur personnalisée optionnelle
   jiraUrl: string | null; // lien Jira (clé ticket extraite du dernier segment)
+  comments: WorkItemComment[];
+  labels: ItemLabel[];
   createdAt: string;
   updatedAt: string;
 }

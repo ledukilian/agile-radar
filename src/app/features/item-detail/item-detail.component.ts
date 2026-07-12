@@ -9,7 +9,9 @@ import {
   WORK_ITEM_TYPE_LIST,
   getTypeMeta,
   canBeParent,
-  WorkItemTypeMeta
+  WorkItemTypeMeta,
+  ItemLabel,
+  LABEL_PALETTE
 } from '../../core/models/work-item.model';
 import { Dependency, DependencyType, DEPENDENCY_TYPE_LABELS } from '../../core/models/dependency.model';
 import { computeEffectivePoints, getChildren, suggestPointsFromCurse } from '../../core/estimation/estimation.util';
@@ -17,6 +19,7 @@ import { RadarChartComponent } from '../../shared/radar-chart/radar-chart.compon
 import { IconComponent } from '../../shared/icon/icon.component';
 import { SelectComponent, SelectOption } from '../../shared/select/select.component';
 import { extractJiraTicketKey } from '../../core/utils/jira.util';
+import { generateId } from '../../core/utils/id.util';
 
 @Component({
   selector: 'app-item-detail',
@@ -205,6 +208,109 @@ export class ItemDetailComponent {
 
   setJiraUrl(url: string): void {
     this.update({ jiraUrl: url.trim() || null });
+  }
+
+  // ==================== COMMENTAIRES ====================
+
+  newCommentText = '';
+  newCommentAuthor = '';
+  editingCommentId: string | null = null;
+  editCommentText = '';
+  editCommentAuthor = '';
+
+  addComment(): void {
+    const it = this.item();
+    if (!it || !this.newCommentText.trim()) return;
+    this.store.addComment(it.id, this.newCommentText.trim(), this.newCommentAuthor.trim());
+    this.newCommentText = '';
+    this.newCommentAuthor = '';
+  }
+
+  startEdit(commentId: string): void {
+    const it = this.item();
+    const comment = it?.comments.find(c => c.id === commentId);
+    if (!comment) return;
+    this.editingCommentId = commentId;
+    this.editCommentText = comment.text;
+    this.editCommentAuthor = comment.author;
+  }
+
+  saveEdit(): void {
+    const it = this.item();
+    if (!it || !this.editingCommentId || !this.editCommentText.trim()) return;
+    this.store.updateComment(it.id, this.editingCommentId, this.editCommentText.trim(), this.editCommentAuthor.trim());
+    this.editingCommentId = null;
+  }
+
+  cancelEdit(): void {
+    this.editingCommentId = null;
+  }
+
+  deleteComment(commentId: string): void {
+    const it = this.item();
+    if (it) this.store.deleteComment(it.id, commentId);
+  }
+
+  formatCommentDate(iso: string): string {
+    const d = new Date(iso);
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  // ==================== ÉTIQUETTES ====================
+
+  readonly labelPalette = LABEL_PALETTE;
+
+  labelInput = '';
+  showLabelDropdown = false;
+  pendingLabelColor = LABEL_PALETTE[5]; // bleu par défaut
+
+  readonly labelSuggestions = computed<ItemLabel[]>(() => {
+    const q = this.labelInput.toLowerCase().trim();
+    if (!q) return this.store.allLabels();
+    return this.store.allLabels().filter(l => l.name.toLowerCase().includes(q));
+  });
+
+  readonly itemLabels = computed<ItemLabel[]>(() => this.item()?.labels ?? []);
+
+  readonly isNewLabel = computed<boolean>(() => {
+    const q = this.labelInput.trim().toLowerCase();
+    if (!q) return false;
+    return !this.store.allLabels().some(l => l.name.toLowerCase() === q);
+  });
+
+  openLabelDropdown(): void {
+    this.showLabelDropdown = true;
+  }
+
+  closeLabelDropdown(): void {
+    setTimeout(() => { this.showLabelDropdown = false; }, 150);
+  }
+
+  selectExistingLabel(label: ItemLabel): void {
+    const it = this.item();
+    if (!it) return;
+    if (!it.labels.some(l => l.name.toLowerCase() === label.name.toLowerCase())) {
+      this.store.addLabel(it.id, label);
+    }
+    this.labelInput = '';
+    this.showLabelDropdown = false;
+  }
+
+  createAndAddLabel(): void {
+    const name = this.labelInput.trim();
+    if (!name) return;
+    const it = this.item();
+    if (!it) return;
+    const label: ItemLabel = { id: generateId(), name, color: this.pendingLabelColor };
+    this.store.addLabel(it.id, label);
+    this.labelInput = '';
+    this.showLabelDropdown = false;
+    this.pendingLabelColor = LABEL_PALETTE[5];
+  }
+
+  removeLabel(labelId: string): void {
+    const it = this.item();
+    if (it) this.store.removeLabel(it.id, labelId);
   }
 
   // ==================== DÉPENDANCES ====================

@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { WorkItem, getTypeMeta } from '../../core/models/work-item.model';
+import { WorkItem, ItemLabel, getTypeMeta } from '../../core/models/work-item.model';
 import { ItemSchedule } from '../../core/scheduling/scheduling.types';
 import { IconComponent } from '../icon/icon.component';
 import { extractJiraTicketKey } from '../../core/utils/jira.util';
@@ -31,6 +31,19 @@ export class WorkItemCardComponent {
 
   get meta() {
     return getTypeMeta(this.item.type);
+  }
+
+  get commentCount(): number {
+    return this.item.comments?.length ?? 0;
+  }
+
+  get visibleLabels(): ItemLabel[] {
+    return (this.item.labels ?? []).slice(0, 3);
+  }
+
+  get hiddenLabelCount(): number {
+    const total = this.item.labels?.length ?? 0;
+    return Math.max(0, total - 3);
   }
 
   get effectivePoints(): number {

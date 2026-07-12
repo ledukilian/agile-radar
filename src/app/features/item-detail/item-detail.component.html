@@ -44,6 +44,69 @@
         </p>
       </div>
 
+      <!-- Étiquettes -->
+      <div class="glass-inner rounded-xl p-3">
+        <div class="flex items-center gap-2 mb-2">
+          <app-icon name="tag" [size]="14" color="var(--text-muted)"></app-icon>
+          <span class="text-sm font-medium text-glass-primary">Étiquettes</span>
+        </div>
+
+        <!-- Étiquettes existantes -->
+        <div class="flex flex-wrap gap-1.5 mb-2" *ngIf="itemLabels().length > 0">
+          <span *ngFor="let label of itemLabels()"
+            class="label-chip inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium"
+            [style.background]="label.color + '22'" [style.color]="label.color" [style.borderColor]="label.color + '55'">
+            {{ label.name }}
+            <button (click)="removeLabel(label.id)" class="label-remove" title="Retirer">
+              <app-icon name="close" [size]="10"></app-icon>
+            </button>
+          </span>
+        </div>
+
+        <!-- Ajout -->
+        <div class="relative">
+          <input class="glass-input rounded-lg px-3 py-1.5 w-full text-sm"
+            [(ngModel)]="labelInput"
+            (focus)="openLabelDropdown()"
+            (blur)="closeLabelDropdown()"
+            (keydown.enter)="isNewLabel() ? createAndAddLabel() : null"
+            placeholder="Ajouter une étiquette…" />
+
+          <div *ngIf="showLabelDropdown" class="label-dropdown glass-card rounded-lg p-1 mt-1">
+            <!-- Suggestions existantes -->
+            <button *ngFor="let s of labelSuggestions()"
+              (mousedown)="selectExistingLabel(s)"
+              class="label-suggestion w-full text-left flex items-center gap-2 px-2 py-1.5 rounded text-sm">
+              <span class="label-dot" [style.background]="s.color"></span>
+              <span class="text-glass-secondary">{{ s.name }}</span>
+            </button>
+
+            <!-- Créer une nouvelle -->
+            <div *ngIf="isNewLabel()" class="border-t glass-divider mt-1 pt-1">
+              <div class="px-2 py-1 text-[11px] text-glass-muted">Créer « <strong class="text-glass-primary">{{ labelInput }}</strong> »</div>
+              <div class="px-2 py-1 flex flex-wrap gap-1">
+                <button *ngFor="let c of labelPalette"
+                  (mousedown)="pendingLabelColor = c"
+                  class="color-swatch"
+                  [style.background]="c"
+                  [class.color-swatch-active]="pendingLabelColor === c"
+                  [title]="c">
+                </button>
+              </div>
+              <button (mousedown)="createAndAddLabel()"
+                class="w-full mt-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white"
+                [style.background]="pendingLabelColor">
+                Créer l'étiquette
+              </button>
+            </div>
+
+            <p *ngIf="!isNewLabel() && labelSuggestions().length === 0" class="px-2 py-2 text-[11px] text-glass-muted">
+              Aucune étiquette trouvée
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- Type / Parent / Itération -->
       <div class="grid grid-cols-3 gap-3">
         <div>
@@ -123,6 +186,65 @@
             <span class="flex-1 truncate text-glass-secondary">{{ c.title }}</span>
             <span class="text-[11px] text-glass-muted">{{ c.points }} pts</span>
           </button>
+        </div>
+      </div>
+
+      <!-- Commentaires -->
+      <div class="glass-inner rounded-xl p-3">
+        <div class="flex items-center gap-2 mb-3">
+          <app-icon name="message-circle" [size]="14" color="var(--text-muted)"></app-icon>
+          <span class="text-sm font-medium text-glass-primary">Commentaires</span>
+          <span class="text-[11px] text-glass-muted ml-1" *ngIf="it.comments.length > 0">({{ it.comments.length }})</span>
+        </div>
+
+        <!-- Liste des commentaires -->
+        <div class="space-y-2 mb-3" *ngIf="it.comments.length > 0">
+          <div *ngFor="let c of it.comments" class="comment-item rounded-lg p-2.5">
+            <ng-container *ngIf="editingCommentId !== c.id; else editTpl">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm text-glass-primary whitespace-pre-wrap leading-snug">{{ c.text }}</p>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span *ngIf="c.author" class="text-[10px] font-semibold text-glass-secondary">{{ c.author }}</span>
+                    <span class="text-[10px] text-glass-muted">{{ formatCommentDate(c.updatedAt) }}</span>
+                    <span *ngIf="c.updatedAt !== c.createdAt" class="text-[10px] text-glass-muted italic">(modifié)</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                  <button (click)="startEdit(c.id)" class="glass-btn rounded w-6 h-6 flex items-center justify-center" title="Modifier">
+                    <app-icon name="edit" [size]="11"></app-icon>
+                  </button>
+                  <button (click)="deleteComment(c.id)" class="comment-delete rounded w-6 h-6 flex items-center justify-center" title="Supprimer">
+                    <app-icon name="trash" [size]="11"></app-icon>
+                  </button>
+                </div>
+              </div>
+            </ng-container>
+            <ng-template #editTpl>
+              <textarea rows="2" class="glass-input rounded-lg px-2 py-1.5 w-full text-sm resize-none mb-1.5"
+                [(ngModel)]="editCommentText" placeholder="Commentaire…"></textarea>
+              <input class="glass-input rounded-lg px-2 py-1.5 w-full text-xs mb-1.5"
+                [(ngModel)]="editCommentAuthor" placeholder="Votre nom (optionnel)" />
+              <div class="flex gap-1.5">
+                <button (click)="saveEdit()" class="btn-accent rounded-lg px-3 py-1 text-xs">Enregistrer</button>
+                <button (click)="cancelEdit()" class="glass-btn rounded-lg px-3 py-1 text-xs">Annuler</button>
+              </div>
+            </ng-template>
+          </div>
+        </div>
+
+        <!-- Nouveau commentaire -->
+        <div class="comment-new-form">
+          <textarea rows="2" class="glass-input rounded-lg px-3 py-2 w-full text-sm resize-none mb-1.5"
+            [(ngModel)]="newCommentText" placeholder="Écrire un commentaire…"></textarea>
+          <div class="flex items-center gap-2">
+            <input class="glass-input rounded-lg px-3 py-1.5 flex-1 text-xs"
+              [(ngModel)]="newCommentAuthor" placeholder="Votre nom (optionnel)" />
+            <button (click)="addComment()" class="btn-accent rounded-lg px-3 py-1.5 text-xs whitespace-nowrap"
+              [disabled]="!newCommentText.trim()">
+              <app-icon name="send" [size]="13"></app-icon> Ajouter
+            </button>
+          </div>
         </div>
       </div>
 

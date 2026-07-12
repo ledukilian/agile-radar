@@ -9,7 +9,8 @@ export type IconName =
   | 'arrow-up' | 'arrow-down' | 'trash' | 'plus' | 'minus' | 'edit' | 'note'
   | 'camera' | 'help' | 'grid' | 'dots' | 'save' | 'search' | 'chevron-down'
   | 'link' | 'alert-triangle' | 'alert-octagon' | 'scissors' | 'check-circle'
-  | 'send' | 'calendar' | 'lightbulb' | 'move' | 'reset' | 'flag';
+  | 'send' | 'calendar' | 'lightbulb' | 'move' | 'reset' | 'flag'
+  | 'message-circle' | 'tag';
 
 /**
  * Jeu d'icônes SVG maison (style trait, colorable via `currentColor`).
@@ -219,6 +220,13 @@ export type IconName =
       <ng-container *ngSwitchCase="'flag'">
         <path d="M4 14s1-1 3.5-1 4 1.5 5.5 1.5 3.5-1 3.5-1V3s-1 1-3.5 1-4-1.5-5.5-1.5-3.5 1-3.5 1z" />
         <line x1="4" y1="22" x2="4" y2="14" />
+      </ng-container>
+      <ng-container *ngSwitchCase="'message-circle'">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </ng-container>
+      <ng-container *ngSwitchCase="'tag'">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+        <line x1="7" y1="7" x2="7.01" y2="7" />
       </ng-container>
 
       <ng-container *ngSwitchDefault>
